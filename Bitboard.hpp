@@ -9,9 +9,9 @@
 #include <intrin.h>
 #include "Constants.hpp"
 
-using bitboard = uint64_t;
-using bit = uint64_t;
-using Index = int64_t;
+using bitboard = uint64_t; // 64-bit unsigned integer to represent the bitboard.
+using bit = uint64_t; // single bit
+using Index = int64_t; // index of a square on the board (0-63).
 
 namespace Bitboard {
 	constexpr bitboard MAX_BITBOARD = 0xFFFFFFFFFFFFFFFFULL;
@@ -62,29 +62,34 @@ namespace Bitboard {
 
 		if (bb == 0) return 0;
 
-#if defined(_MSC_VER)  // MSVC (Windows)
-		return std::popcount(bb);
+		#if defined(_MSC_VER)  // MSVC (Windows)
+				return std::popcount(bb);
 
-#elif defined(__GNUC__) || defined(__clang__)  // GCC or Clang
-		return __builtin_popcountll(bb);
-#else
-		// fallback: simple pop count.
-		bitIndex count = 0;
-		while (bb) {
-			bb &= (bb - 1);
-			count++;
-		}
-		return count;
-#endif
+		#elif defined(__GNUC__) || defined(__clang__)  // GCC or Clang
+				return __builtin_popcountll(bb);
+		#else
+				// fallback: simple pop count.
+				bitIndex count = 0;
+				while (bb) {
+					bb &= (bb - 1);
+					count++;
+				}
+				return count;
+		#endif
 	}
 
-	inline void printBitboard(bitboard bitboard, std::string_view c = "1") {
+	inline void printBitboard(bitboard bitboard, Index piece = -1ULL, std::string_view c = "1") {
 		std::string toPrint = "";
 
 		for (int rank = Chess::RANK_SIZE - 1; rank >= 0; rank--) {
 			for (int file = 0; file < Chess::FILE_SIZE; file++) {
 				int Index = rank * Chess::RANK_SIZE + file;
-				toPrint += ((bitboard & SQUARE_BBS[Index]) != 0) ? c : "_";
+
+				if (Index == piece) {
+					toPrint += "X ";
+					continue;
+				}
+				toPrint += ((bitboard & Constants::SQUARE_BBS[Index]) != 0) ? c : "_";
 				toPrint += " ";
 
 			}

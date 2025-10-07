@@ -3,127 +3,117 @@
 
 #include "Bitboard.hpp"
 #include <array>
-
-struct BoardInfo {
-	// rook starting positions.
-	static constexpr bit whiteLeftRook = 0b1ULL;
-	static constexpr bit whiteRightRook = 0b10000000ULL;
-	static constexpr bit blackLeftRook = 0b1ULL << 56;
-	static constexpr bit blackRightRook = 0b10000000ULL << 56;
-	
-	// king starting positions.
-	static constexpr bit whiteKing = 0b10000ULL;
-	static constexpr bit blackKing = 0b10000ULL << 56;
-
-	// king casling positions.
-	static constexpr bit whiteKingLeftCastle = 0b100ULL;
-	static constexpr bit whiteKingRightCastle = 0b1000000ULL;
-	static constexpr bit blackKingLeftCastle = 0b100ULL << 56;
-	static constexpr bit blackKingRightCastle = 0b1000000ULL << 56;
-
-	// king castling attacks.
-	static constexpr bitboard whiteKingLeftCasleAttacks = 0b1100ULL;
-	static constexpr bitboard whiteKingRightCastleAttacks = 0b1100000ULL;
-	static constexpr bitboard blackKingLeftCastleAttacks = 0b1100ULL << 56;
-	static constexpr bitboard blackKingRightCastleAttacks = 0b1100000ULL << 56;
-
-public:
-	const bool whiteMove;
-
-	const bool enPassant;
-
-	// castling rights.
-	const bool whiteLeftCastle;
-	const bool whiteRightCastle;
-	const bool blackLeftCastle;
-	const bool blackRightCastle;
-
-	constexpr BoardInfo(bool whiteMove, bool enPassant, bool whiteLeftCastle, 
-		bool whiteRightCastle, bool blackLeftCastle, bool blackRightCastle) :
-		whiteMove(whiteMove), enPassant(enPassant), whiteLeftCastle(whiteLeftCastle),
-		whiteRightCastle(whiteRightCastle), blackLeftCastle(blackLeftCastle), blackRightCastle(blackRightCastle)
-	{}
-
-	constexpr inline bool canCastle() const {
-		if (this->whiteMove) {
-			return this->whiteLeftCastle || this->whiteRightCastle;
-		}
-		else {
-			return this->blackLeftCastle || this->blackRightCastle;
-		}
-	}
-
-	constexpr inline bool canCastleLeft() const {
-		if (this->whiteMove) {
-			return this->whiteLeftCastle;
-		}
-		else {
-			return this->blackLeftCastle;
-		}
-	}
-
-	constexpr inline bool canCastleRight() const {
-		if (this->whiteMove) {
-			return this->whiteRightCastle;
-		}
-		else {
-			return this->blackRightCastle;
-		}
-	}
-
-	constexpr BoardInfo kingMoved() {
-		if (this->whiteMove) {
-			return BoardInfo(false, false, false, false, this->blackLeftCastle, this->blackRightCastle);
-		}
-		else {
-			return BoardInfo(true, false, this->whiteLeftCastle, this->whiteRightCastle, false, false);
-		}
-	}
-
-	constexpr BoardInfo pawnMovedTwoSquares() {
-		return BoardInfo(!this->whiteMove, true, this->whiteLeftCastle, 
-			this->whiteRightCastle, this->blackLeftCastle, this->blackRightCastle);
-	}
-
-	constexpr BoardInfo leftRookMoved() {
-		if (this->whiteMove) {
-			return BoardInfo(false, false, false, this->whiteRightCastle, this->blackLeftCastle, this->blackRightCastle);
-		}
-		else {
-			return BoardInfo(true, false, this->whiteLeftCastle, this->whiteRightCastle, false, this->blackRightCastle);
-		}
-	}
-
-	constexpr BoardInfo rightRookMoved() {
-		if (this->whiteMove) {
-			return BoardInfo(false, false, this->whiteLeftCastle, false, this->blackLeftCastle, this->blackRightCastle);
-		}
-		else {
-			return BoardInfo(true, false, this->whiteLeftCastle, this->whiteRightCastle, this->blackLeftCastle, false);
-		}
-	}
-};
+#include <iostream>
+#include "Zobrist.hpp"
+#include "Fen.hpp"
+#include <unordered_map>
+#include <stack>
+#include "BoardInfo.hpp"
+#include "Piece.hpp"
+#include "Move.hpp"
+#include <functional>
 
 class Board {
 private:
-	enum : uint8_t {
-		WHITE_PAWN = 0,
-		WHITE_KNIGHT = 1,
-		WHITE_BISHOP = 2,
-		WHITE_ROOK = 3,
-		WHITE_QUEEN = 4,
-		WHITE_KING = 5,
-		BLACK_PAWN = 6,
-		BLACK_KNIGHT = 7,
-		BLACK_BISHOP = 8,
-		BLACK_ROOK = 9,
-		BLACK_QUEEN = 10,
-		BLACK_KING = 11,
-	};
-
-	std::array<bitboard, 12> pieces;
+	const static std::string defaultFen;
 
 	BoardInfo info;
+	bitboard checkingPieces;
+	bitboard rookPins;
+	bitboard bishopPins;
+
+	bitboard boardKey;
+	bitboard allPieces;
+	bitboard whitePieces;
+	bitboard blackPieces;
+
+	std::array<bitboard, 12> pieces;
+	std::array<ColoredPiece, Chess::BOARD_SIZE> piecesArr;
+
+	// count the number of repetitions of positions in the game.
+	std::unordered_map<bitboard, char> positionsRep;
+	bool threefoldRepetition;
+
+	// save last moves, positions and board infos.
+	std::stack<Move> lastMoves;
+	std::stack<bitboard> lastPositions;
+	std::stack<BoardInfo> lastBoardInfos;
+
+	void init(const std::string& fen) {
+		Fen::handleFen(fen, this->pieces, this->info);
+		this->updateAllPieces();
+		this->updateBoardKey();
+		this->buildPiecesArr();
+	}
+	void updateAllPieces() {
+		this->allPieces = 0ULL;
+		for (int i = 0; i < this->pieces.size(); i++) {
+			if (i < 6) {
+				this->whitePieces |= this->pieces[i];
+			}
+			else {
+				this->blackPieces |= this->pieces[i];
+			}
+		}
+		this->allPieces = this->whitePieces | this->blackPieces;
+	}
+	void updateBoardKey() {
+		this->boardKey = Zobrist::genKey(this->info.whiteMove);
+		for (int i = 0; i < this->pieces.size(); i++) {
+			bitboard pieceBB = this->pieces[i];
+			while (pieceBB) {
+				Index square = Bitboard::popLSB(pieceBB);
+
+				this->boardKey = Zobrist::applyPiece(this->boardKey, static_cast<Piece>(i), square);
+			}
+		}
+		this->boardKey = Zobrist::applyBoardInfo(this->boardKey, this->info);
+	}
+
+	void calcPins();
+
+	template<bool forBishopPins>
+	bitboard processPins(bitboard possiblePinningPieces, bitboard kingRayMoves) const;
+
+	void calcChecks();
+	void buildPiecesArr();
+
+
+public:
+	Board() { this->init(Board::defaultFen); }
+	Board(const std::string& fen) { this->init(fen); }
+	inline bitboard getPieces(ColoredPiece piece) const { return this->pieces[piece]; }
+	inline bitboard getPieces(Piece piece, bool white) const { return this->pieces[piece + (white ? 0 : 6)]; }
+	inline bitboard getAllPieces() const { return this->allPieces; }
+	inline bitboard getEnemyPieces() const { return this->info.whiteMove ? this->blackPieces : this->whitePieces; }
+	inline bitboard getFriendlyPieces() const { return this->info.whiteMove ? this->whitePieces : this->blackPieces; }
+	inline bitboard getPinnedPieces() const { return this->rookPins | this->bishopPins; }
+	inline bool isPinnedByBishop(Index square) const { return (Constants::SQUARE_BBS[square] & this->bishopPins) != 0; }
+	inline bool isPinnedByRook(Index square) const { return (Constants::SQUARE_BBS[square] & this->rookPins) != 0; }
+	inline Index getEnPassantTarget() const { return this->info.enPassantTarget; }
+	inline Index getCheckingPiecePos() const { return Bitboard::lsb(this->checkingPieces); }
+	inline bool inCheck() const { return this->checkingPieces != 0; }
+	inline bool whiteToMove() const { return this->info.whiteMove; }
+	short numOfChecks() const { return Bitboard::numOfBits(this->checkingPieces); }
+	inline bitboard getCheckingPieces() const { return this->checkingPieces; }
+	inline bitboard isPiecePinned(Index square) const { return (Constants::SQUARE_BBS[square] & (this->rookPins | this->bishopPins)) != 0; }
+	inline ColoredPiece getColoredPieceOnSquare(Index square) const {
+		if (square > Chess::BOARD_SIZE) return ColoredPiece::COLORED_NONE;
+		return this->piecesArr[square];
+	}
+	inline Piece getPieceOnSquare(Index square) const {
+		return PieceHelper::getPieceType(this->getColoredPieceOnSquare(square));
+	}
+	friend std::ostream& operator<<(std::ostream& os, const Board& board);
+
+	inline bool pieceOnSquare(Index square) const {
+		return (this->allPieces & Constants::SQUARE_BBS[square]) != 0;
+	}
+	inline Index getKingPos() const { return Bitboard::lsb(this->pieces[this->info.whiteMove ? ColoredPiece::WHITE_KING : ColoredPiece::BLACK_KING]); }
+	
+	inline bool canCastleKingside() const { return this->info.canCastleRight(); }
+	inline bool canCastleQueenside() const { return this->info.canCastleLeft(); }
+	bool isSquareAttacked(Index square, bitboard pieces) const;
 
 
 };

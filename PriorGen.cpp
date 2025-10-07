@@ -265,7 +265,7 @@ void PriorGen::genOrthoBasicMoves() {
     }
 }
 std::vector<bitboard> PriorGen::genOccupancies(bitboard moves) {
-    std::vector<bitboard> occupancies(SQUARE_BBS[Bitboard::numOfBits(moves)]);
+    std::vector<bitboard> occupancies(Constants::SQUARE_BBS[Bitboard::numOfBits(moves)]);
     bitboard currOccupancy = moves;
 
     for (int i = 0; i < occupancies.size(); i++) {
