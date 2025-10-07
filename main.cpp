@@ -12,6 +12,25 @@ int main() {
 
 	unsigned short moveCount = MoveGen::genAllLegalMoves(board, &moves[0]);
 
+	std::cout << board << '\n';
+	for (int i = 0; i < moveCount; i++) {
+		//std::cout << std::setw(3) << i + 1 << ". " << moves[i] << "\n";
+	}
+
+
+	board.makeMove(moves[0]);
+
+	std::cout << board << '\n';
+	moveCount = MoveGen::genAllLegalMoves(board, &moves[0]);
+	for (int i = 0; i < moveCount; i++) {
+		//std::cout << std::setw(3) << i + 1 << ". " << moves[i] << "\n";
+	}
+
+
+	board.makeMove(moves[0]);
+
+	std::cout << board << '\n';
+	moveCount = MoveGen::genAllLegalMoves(board, &moves[0]);
 	for (int i = 0; i < moveCount; i++) {
 		std::cout << std::setw(3) << i + 1 << ". " << moves[i] << "\n";
 	}

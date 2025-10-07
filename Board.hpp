@@ -15,6 +15,18 @@
 
 class Board {
 private:
+	// rook starting positions.
+	static constexpr bit whiteLeftRook = 0b1ULL;
+	static constexpr bit whiteRightRook = 0b10000000ULL;
+	static constexpr bit blackLeftRook = 0b1ULL << 56;
+	static constexpr bit blackRightRook = 0b10000000ULL << 56;
+
+	// rook castling positions.
+	static constexpr bit whiteLeftRookCastle = 0b1000ULL;
+	static constexpr bit whiteRightRookCastle = 0b100000ULL;
+	static constexpr bit blackLeftRookCastle = 0b1000ULL << 56;
+	static constexpr bit blackRightRookCastle = 0b100000ULL << 56;
+
 	const static std::string defaultFen;
 
 	BoardInfo info;
@@ -44,9 +56,12 @@ private:
 		this->updateAllPieces();
 		this->updateBoardKey();
 		this->buildPiecesArr();
+		this->calcChecks();
+		this->calcPins();
 	}
 	void updateAllPieces() {
-		this->allPieces = 0ULL;
+		this->whitePieces = 0ULL;
+		this->blackPieces = 0ULL;
 		for (int i = 0; i < this->pieces.size(); i++) {
 			if (i < 6) {
 				this->whitePieces |= this->pieces[i];
@@ -64,7 +79,7 @@ private:
 			while (pieceBB) {
 				Index square = Bitboard::popLSB(pieceBB);
 
-				this->boardKey = Zobrist::applyPiece(this->boardKey, static_cast<Piece>(i), square);
+				this->boardKey = Zobrist::applyPiece(this->boardKey, static_cast<ColoredPiece>(i), square);
 			}
 		}
 		this->boardKey = Zobrist::applyBoardInfo(this->boardKey, this->info);
@@ -78,10 +93,15 @@ private:
 	void calcChecks();
 	void buildPiecesArr();
 
+	void removePiece(ColoredPiece piece, Index sourceSquare, bitboard& coloredPieces);
+	void addPiece(ColoredPiece piece, Index sourceSquare, bitboard& coloredPieces);
+	void movePiece(ColoredPiece piece, Index sourceSquare, Index targetSquare, bitboard& coloredPieces);
 
 public:
 	Board() { this->init(Board::defaultFen); }
 	Board(const std::string& fen) { this->init(fen); }
+	void makeMove(Move move);
+	void unmakeMove();
 	inline bitboard getPieces(ColoredPiece piece) const { return this->pieces[piece]; }
 	inline bitboard getPieces(Piece piece, bool white) const { return this->pieces[piece + (white ? 0 : 6)]; }
 	inline bitboard getAllPieces() const { return this->allPieces; }

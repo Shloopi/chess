@@ -7,7 +7,7 @@
 #include "Piece.hpp"
 
 namespace Zobrist {
-    inline std::array<std::array<bitboard, 64>, 12> piecesRandom;
+    inline std::array<std::array<std::array<bitboard, 64>, 6>, 2> piecesRandom;
     inline std::array<bitboard, 2> turnRandom;
     inline std::array<bitboard, 16> castlingRandom;
     inline std::array<bitboard, 9> enPassantFileRandom;
@@ -15,7 +15,8 @@ namespace Zobrist {
 
     void init();
     bitboard genKey(bool whiteToMove);
-    bitboard applyPiece(bitboard key, Piece piece, Index square);
+    bitboard applyPiece(bitboard key, bool color, Piece piece, Index square);
+    bitboard applyPiece(bitboard key, ColoredPiece piece, Index square);
     bitboard applyTurn(bitboard key, bool whiteToMove);
     bitboard applyBoardInfo(bitboard key, const BoardInfo& info);
 

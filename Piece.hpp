@@ -65,10 +65,25 @@ struct PieceHelper {
 
 		return '_';
 	}
+	static inline std::string getName(Piece piece) {
+		switch (piece) {
+			case Piece::PAWN: return "Pawn";
+			case Piece::KNIGHT: return "Knight";
+			case Piece::BISHOP: return "Bishop";
+			case Piece::ROOK: return "Rook";
+			case Piece::QUEEN: return "Queen";
+			case Piece::KING: return "King";
+			default: return "None";
+		}
+	}
 
 	static inline Piece getPieceType(ColoredPiece piece) {
 		if (piece == ColoredPiece::COLORED_NONE) return Piece::NONE;
 		return static_cast<Piece>(piece % 6);
+	}
+	static inline ColoredPiece getColoredPieceType(Piece piece, bool white) {
+		if (piece == Piece::NONE) return ColoredPiece::COLORED_NONE;
+		return static_cast<ColoredPiece>(piece + (6 * (!white)));
 	}
 
 	PieceHelper() = delete;

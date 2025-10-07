@@ -2,17 +2,13 @@
 #include "Zobrist.hpp"
 
 namespace Zobrist {
-    //std::array<bitboard, 2> Zobrist::turnRandom{};
-    //bitboard Zobrist::seed = 0ULL;
-    //std::array<std::array<std::array<bitboard, 64>, 6>, 2> Zobrist::piecesRandom{};
-    //std::array<bitboard, 16> Zobrist::castlingRandom{};
-    //std::array<bitboard, 9> Zobrist::enPassantFileRandom{};
-
     void init() {
         // generate numbers for each color, type of piece in each square.
         for (int i = 0; i < Zobrist::piecesRandom.size(); i++) {
             for (int j = 0; j < Zobrist::piecesRandom[i].size(); j++) {
-                Zobrist::piecesRandom[i][j] = Zobrist::genRandomNumber();
+                for (int k = 0; k < Zobrist::piecesRandom[i][j].size(); k++) {
+                    Zobrist::piecesRandom[i][j][k] = Zobrist::genRandomNumber();
+                }
             }
         }
 
@@ -33,12 +29,15 @@ namespace Zobrist {
     }
     bitboard Zobrist::genKey(bool whiteToMove) { return Zobrist::turnRandom[whiteToMove]; }
 
-    bitboard Zobrist::applyPiece(bitboard key, Piece piece, Index square) {
-        bitboard pieceRandom = Zobrist::piecesRandom[piece][square];
+    bitboard Zobrist::applyPiece(bitboard key, bool color, Piece piece, Index square) {
+        bitboard pieceRandom = Zobrist::piecesRandom[color][piece][square];
 
         key ^= pieceRandom;
 
         return key;
+    }
+    bitboard Zobrist::applyPiece(bitboard key, ColoredPiece piece, Index square) {
+		return Zobrist::applyPiece(key, piece < 6, static_cast<Piece>(piece % 6), square);
     }
 
     bitboard Zobrist::applyBoardInfo(bitboard key, const BoardInfo& info) {

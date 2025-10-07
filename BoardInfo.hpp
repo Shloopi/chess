@@ -10,6 +10,8 @@ struct BoardInfo {
 	static constexpr bit blackLeftRook = 0b1ULL << 56;
 	static constexpr bit blackRightRook = 0b10000000ULL << 56;
 
+
+
 	// king starting positions.
 	static constexpr bit whiteKing = 0b10000ULL;
 	static constexpr bit blackKing = 0b10000ULL << 56;
@@ -82,14 +84,13 @@ public:
 			this->blackLeftCastle = false;
 			this->blackRightCastle = false;
 		}
-
-		this->whiteMove = !this->whiteMove;
-		this->enPassantTarget = -1;
 	}
 
 	void pawnMovedTwoSquares(Index enPassantTarget) {
-		this->whiteMove = !this->whiteMove;
 		this->enPassantTarget = enPassantTarget;
+	}
+	void pawnDidntMoveTwoSquares() {
+		this->enPassantTarget = -1;
 	}
 
 	void leftRookMoved() {
@@ -99,10 +100,7 @@ public:
 		else {
 			this->blackLeftCastle = false;
 		}
-		this->whiteMove = !this->whiteMove;
-		this->enPassantTarget = -1;
 	}
-
 	void rightRookMoved() {
 		if (this->whiteMove) {
 			this->whiteRightCastle = false;
@@ -111,8 +109,10 @@ public:
 
 			this->blackRightCastle = false;
 		}
+	}
+	void toggleTurn() { 
 		this->whiteMove = !this->whiteMove;
-		this->enPassantTarget = -1;
+		if (this->whiteMove) this->fullmoves++; 
 	}
 };
 

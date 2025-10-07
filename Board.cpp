@@ -148,3 +148,144 @@ void Board::buildPiecesArr() {
         }
     }
 }
+void Board::removePiece(ColoredPiece piece, Index sourceSquare, bitboard& coloredPieces) {
+	this->pieces[piece] &= ~Constants::SQUARE_BBS[sourceSquare];
+    this->allPieces &= ~Constants::SQUARE_BBS[sourceSquare];
+	coloredPieces &= ~Constants::SQUARE_BBS[sourceSquare];
+
+    this->piecesArr[sourceSquare] = ColoredPiece::COLORED_NONE;
+    this->boardKey = Zobrist::applyPiece(this->boardKey, piece, sourceSquare);
+}
+void Board::addPiece(ColoredPiece piece, Index targetSquare, bitboard& coloredPieces) {
+    this->pieces[piece] |= Constants::SQUARE_BBS[targetSquare];
+    this->allPieces |= Constants::SQUARE_BBS[targetSquare];
+    coloredPieces |= Constants::SQUARE_BBS[targetSquare];
+
+    this->piecesArr[targetSquare] = piece;
+    this->boardKey = Zobrist::applyPiece(this->boardKey, piece, targetSquare);
+}
+void Board::movePiece(ColoredPiece piece, Index sourceSquare, Index targetSquare, bitboard& coloredPieces) {
+    this->removePiece(piece, sourceSquare, coloredPieces);
+    this->addPiece(piece, targetSquare, coloredPieces);
+}
+void Board::makeMove(Move move) {
+    // get this friendly and enemy piece bitboards.
+    bitboard& turnPieces = this->whiteToMove() ? this->whitePieces : this->blackPieces;
+    bitboard& nonTurnPieces = this->whiteToMove() ? this->blackPieces : this->whitePieces;
+
+    bitboard sourceSquareBB = Constants::SQUARE_BBS[move.from];
+    bitboard targetSquareBB = Constants::SQUARE_BBS[move.to];
+
+    // store relevent data of current position.
+    this->lastBoardInfos.push(this->info);
+    this->lastPositions.push(this->boardKey);
+
+    // remove the current board info from the position key.
+    this->boardKey = Zobrist::applyBoardInfo(this->boardKey, this->info);
+
+    // handle capture.
+    if (move.isCapture()) {
+        if (move.type == MoveType::EnPassant) {
+            Index capturedPawn = this->whiteToMove() ? move.to - 8 : move.to + 8;
+            this->removePiece(PieceHelper::getColoredPieceType(move.capture, !this->whiteToMove()), capturedPawn, nonTurnPieces);
+        }
+        else {
+            // if capturing rook, update castling rights accordingly.
+            if (move.capture == Piece::ROOK) {
+                if (move.to == Board::whiteLeftRook || move.to == Board::blackLeftRook) {
+                    this->info.leftRookMoved();
+                }
+                else if (move.to == Board::whiteRightRook || move.to == Board::blackRightRook) {
+                    this->info.rightRookMoved();
+				}
+            }
+            this->removePiece(PieceHelper::getColoredPieceType(move.capture, !this->whiteToMove()), move.to, nonTurnPieces);
+        }
+        
+    }
+
+    // handle promotion.
+    if (move.isPromotion()) {
+		this->removePiece(PieceHelper::getColoredPieceType(move.piece, this->whiteToMove()), move.from, turnPieces);
+        this->removePiece(PieceHelper::getColoredPieceType(move.promote, this->whiteToMove()), move.to, turnPieces);
+    }
+    else {
+		this->movePiece(PieceHelper::getColoredPieceType(move.piece, this->whiteToMove()), move.from, move.to, turnPieces);
+    }
+
+
+    // handle double pawn push.
+    if (move.type == MoveType::DoublePawnPush) {
+        this->info.pawnMovedTwoSquares(this->whiteToMove() ? move.to - 8 : move.to + 8);
+    }
+    else {
+        this->info.pawnDidntMoveTwoSquares();
+    }
+
+    if (move.piece == Piece::KING) {
+        this->info.kingMoved();
+
+        // handle castling.
+        if (move.isCastling()) {
+            Index sourceRookSquare, targetRookSquare;
+
+            if (this->whiteToMove()) {
+                if (move.type == MoveType::KingCastle) {
+					sourceRookSquare = Board::whiteRightRook;
+                    targetRookSquare = Board::whiteRightRookCastle;
+                }
+                else {
+                    sourceRookSquare = Board::whiteLeftRook;
+					targetRookSquare = Board::whiteLeftRookCastle;
+                }
+            }
+            else {
+                if (move.type == MoveType::KingCastle) {
+                    sourceRookSquare = Board::blackRightRook;
+					targetRookSquare = Board::blackRightRookCastle;
+                }
+                else {
+                    sourceRookSquare = Board::blackLeftRook;
+					targetRookSquare = Board::blackLeftRookCastle;
+                }
+            }
+
+            this->movePiece(PieceHelper::getColoredPieceType(Piece::ROOK, this->whiteToMove()), sourceRookSquare, targetRookSquare, turnPieces);
+        }
+    }
+    // handle castling rights after rook moves.
+    else if (move.piece == Piece::ROOK) {
+        if (move.to == Board::whiteLeftRook || move.to == Board::blackLeftRook) {
+            this->info.leftRookMoved();
+        }
+        else if (move.to == Board::whiteRightRook || move.to == Board::blackRightRook) {
+            this->info.rightRookMoved();
+        }
+    }
+
+    // handle halfmove counter.
+    if (move.isCapture() || move.piece == Piece::PAWN) this->info.halfmoves = 0;
+    else this->info.halfmoves++;
+
+    // push the move.
+    this->lastMoves.push(move);
+
+    // add the new board info to the position key.
+    this->boardKey = Zobrist::applyBoardInfo(this->boardKey, this->info);
+
+    // reverse the color.
+    this->boardKey = Zobrist::applyTurn(this->boardKey, this->info.whiteMove);
+	this->info.toggleTurn();
+    this->boardKey = Zobrist::applyTurn(this->boardKey, this->info.whiteMove);
+
+    // handle position repetition.
+    this->positionsRep[this->boardKey]++;
+    this->threefoldRepetition = this->positionsRep[this->boardKey] >= 3;
+
+    this->allPieces = this->whitePieces | this->blackPieces;
+    this->calcChecks();
+    this->calcPins();
+
+    // check end.
+    //this->info.endState = GameResult::checkState(*this);
+}

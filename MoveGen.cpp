@@ -289,7 +289,7 @@ namespace MoveGen {
             moveType = MoveGen::calcMoveType<T>(sourceSquare, square, enemyPieces);
 
             if (moveType == MoveType::Capture) {
-                *out++ = Move(sourceSquare, square, T, moveType, board.getColoredPieceOnSquare(square));
+                *out++ = Move(sourceSquare, square, T, moveType, board.getPieceOnSquare(square));
             }
             else {
                 *out++ = Move(sourceSquare, square, T, moveType);
@@ -318,7 +318,7 @@ namespace MoveGen {
     }
     void MoveGen::insertPawnMoves(const Board& board, Move* moves, unsigned short& moveCount, bitboard moveBitboard, short StartSquareDelta, MoveType moveType) {
         MoveType tempMoveType;
-        ColoredPiece capturedPiece;
+        Piece capturedPiece;
         Index square, sourceSquare;
 
         bitboard promoMoves = moveBitboard & (Bitboard::RANK0 | Bitboard::RANK7);
@@ -333,10 +333,10 @@ namespace MoveGen {
             sourceSquare = square - StartSquareDelta;
 
             if (square == enPassant) {
-                *out++ = Move(sourceSquare, square, Piece::PAWN, MoveType::EnPassant, board.whiteToMove() ? ColoredPiece::BLACK_PAWN : ColoredPiece::WHITE_PAWN);
+                *out++ = Move(sourceSquare, square, Piece::PAWN, MoveType::EnPassant, Piece::PAWN);
             }
             else if (moveType == MoveType::Capture) {
-                *out++ = Move(sourceSquare, square, Piece::PAWN, moveType, board.getColoredPieceOnSquare(square));
+                *out++ = Move(sourceSquare, square, Piece::PAWN, moveType, board.getPieceOnSquare(square));
             }
             else {
                 *out++ = Move(sourceSquare, square, Piece::PAWN, moveType);
@@ -350,17 +350,17 @@ namespace MoveGen {
 
             if (moveType == MoveType::Capture) {
                 tempMoveType = MoveType::PromotionCapture;
-                capturedPiece = board.getColoredPieceOnSquare(square);
+                capturedPiece = board.getPieceOnSquare(square);
             }
             else {
                 tempMoveType = MoveType::Promotion;
-                capturedPiece = ColoredPiece::COLORED_NONE;
+                capturedPiece = Piece::NONE;
             }
 
-            *out++ = Move(sourceSquare, square, Piece::PAWN, tempMoveType, capturedPiece, board.whiteToMove() ? ColoredPiece::BLACK_QUEEN : ColoredPiece::WHITE_QUEEN);
-            *out++ = Move(sourceSquare, square, Piece::PAWN, tempMoveType, capturedPiece, board.whiteToMove() ? ColoredPiece::BLACK_ROOK : ColoredPiece::WHITE_ROOK);
-            *out++ = Move(sourceSquare, square, Piece::PAWN, tempMoveType, capturedPiece, board.whiteToMove() ? ColoredPiece::BLACK_BISHOP : ColoredPiece::WHITE_BISHOP);
-            *out++ = Move(sourceSquare, square, Piece::PAWN, tempMoveType, capturedPiece, board.whiteToMove() ? ColoredPiece::BLACK_KNIGHT : ColoredPiece::WHITE_KNIGHT);
+            *out++ = Move(sourceSquare, square, Piece::PAWN, tempMoveType, capturedPiece, Piece::QUEEN);
+            *out++ = Move(sourceSquare, square, Piece::PAWN, tempMoveType, capturedPiece, Piece::ROOK);
+            *out++ = Move(sourceSquare, square, Piece::PAWN, tempMoveType, capturedPiece, Piece::BISHOP);
+            *out++ = Move(sourceSquare, square, Piece::PAWN, tempMoveType, capturedPiece, Piece::KNIGHT);
         }
 
         moveCount = out - moves;
@@ -370,7 +370,6 @@ namespace MoveGen {
             // get bitboard moves.
             bitboard singlePushes, doublePushes, leftCaptures, rightCaptures;
             MoveGen::genBitboardsLegalPawnMoves(board, pawns, singlePushes, doublePushes, leftCaptures, rightCaptures);
-
             MoveGen::insertPawnMoves(board, moves, moveCount, singlePushes, board.whiteToMove() ? 8 : -8, MoveType::Quiet);
             MoveGen::insertPawnMoves(board, moves, moveCount, doublePushes, board.whiteToMove() ? 16 : -16, MoveType::DoublePawnPush);
             MoveGen::insertPawnMoves(board, moves, moveCount, leftCaptures, board.whiteToMove() ? 7 : -9, MoveType::Capture);
