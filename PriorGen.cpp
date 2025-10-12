@@ -257,7 +257,7 @@ void PriorGen::genOrthoBasicMoves() {
         bbRank = (Bitboard::RANK0 << (rank * Chess::RANK_SIZE));
 
         // combine the file and rank bitboards and remove the current square from the bitboard.
-        PriorGen::orthoBasicMoves[i] = (bbFile | bbRank) & ~SQUARE_BBS[i];
+        PriorGen::orthoBasicMoves[i] = (bbFile | bbRank) & ~QUARE_BBS[i];
 
         bbFile &= ~Bitboard::RANK0 & ~Bitboard::RANK7;
         bbRank &= ~Bitboard::FILE_A & ~Bitboard::FILE_H;
