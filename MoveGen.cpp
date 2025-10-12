@@ -300,7 +300,7 @@ namespace MoveGen {
     }
     template<Piece T>
     MoveType calcMoveType(Index sourceSquare, Index targetSquare, const bitboard& enemyPieces) {
-        bitboard targetSquareBB = 1ULL << targetSquare;
+        bitboard targetSquareBB = Constants::SQUARE_BBS[targetSquare];
 
         if constexpr (T == Piece::KNIGHT || T == Piece::BISHOP ||
             T == Piece::ROOK || T == Piece::QUEEN) {
@@ -433,5 +433,38 @@ namespace MoveGen {
         }
 
         return moveCount;
+    }
+    bool hasLegalMoves(const Board& board) {
+        if (board.numOfChecks() > 1) return MoveGen::genLegalKingMoves(board, board.getKingPos()) != 0;
+
+        // get all pawns.
+        bitboard pawns = board.getPieces(Piece::PAWN, board.whiteToMove());
+
+        // insert pawn moves.
+        bitboard moves = MoveGen::genBitboardLegalPawnMoves(board, pawns);
+        if (moves != 0) return true;
+
+        // get all other pieces.
+        bitboard nonPawnPieces = board.getFriendlyPieces() & ~pawns;
+
+        Index square;
+        Piece piece;
+
+        // insert all other piece moves.
+        while (nonPawnPieces != 0) {
+            square = Bitboard::popLSB(nonPawnPieces);
+            
+            piece = board.getPieceOnSquare(square);
+
+            if (piece == Piece::KNIGHT) moves = MoveGen::genLegalMoves<Piece::KNIGHT>(board, square);
+            else if (piece == Piece::BISHOP) moves = MoveGen::genLegalMoves<Piece::BISHOP>(board, square);
+            else if (piece == Piece::ROOK) moves = MoveGen::genLegalMoves<Piece::ROOK>(board, square);
+            else if (piece == Piece::QUEEN) moves = MoveGen::genLegalMoves<Piece::QUEEN>(board, square);
+            else if (piece == Piece::KING) moves = MoveGen::genLegalMoves<Piece::KING>(board, square);
+            if (moves != 0) return true;
+
+        }
+
+        return false;
     }
 }

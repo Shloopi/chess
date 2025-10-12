@@ -65,12 +65,12 @@ void Board::calcPins() {
     bitboard queens = this->pieces[this->info.whiteMove ? ColoredPiece::WHITE_QUEEN : ColoredPiece::BLACK_QUEEN];
 
     // calculate the potential pieces that can pin pieces (treating queens as being both rooks and bishops).
-    bitboard possiblePinningBishops = Constants::BISHOP_ATTACKS[kingSquare] & (bishops | queens) & ~this->checkingPieces;
-    bitboard possiblePinningRooks = Constants::ROOK_ATTACKS[kingSquare] & (rooks | queens) & ~this->checkingPieces;
+    bitboard possiblePinningBishops = Constants::BISHOP_ATTACKS[kingSquare] & (bishops | queens) & ~this->info.checkingPieces;
+    bitboard possiblePinningRooks = Constants::ROOK_ATTACKS[kingSquare] & (rooks | queens) & ~this->info.checkingPieces;
 
     // check pins for each type (bishops, rooks, queens).
-    this->bishopPins = processPins<true>(possiblePinningBishops, bishopMoves);
-    this->rookPins = processPins<false>(possiblePinningRooks, rookMoves);
+    this->info.bishopPins = processPins<true>(possiblePinningBishops, bishopMoves);
+    this->info.rookPins = processPins<false>(possiblePinningRooks, rookMoves);
 }
 template<bool forBishopPins>
 bitboard Board::processPins(bitboard possiblePinningPieces, bitboard kingRayMoves) const {
@@ -97,22 +97,22 @@ bitboard Board::processPins(bitboard possiblePinningPieces, bitboard kingRayMove
 void Board::calcChecks() {
 	Index kingSquare = this->getKingPos();
 
-	this->checkingPieces = 0ULL;
+	this->info.checkingPieces = 0ULL;
 
     // knight checks.
-	this->checkingPieces |= (Constants::KNIGHT_MOVES[kingSquare] & this->pieces[this->info.whiteMove ? ColoredPiece::BLACK_KNIGHT : ColoredPiece::WHITE_KNIGHT]);
+	this->info.checkingPieces |= (Constants::KNIGHT_MOVES[kingSquare] & this->pieces[this->info.whiteMove ? ColoredPiece::BLACK_KNIGHT : ColoredPiece::WHITE_KNIGHT]);
 
     // bishop checks.
-    this->checkingPieces |= (MoveGen::getPseudoBishopMoves(*this, kingSquare, this->allPieces) & this->pieces[this->info.whiteMove ? ColoredPiece::BLACK_BISHOP : ColoredPiece::WHITE_BISHOP]);
+    this->info.checkingPieces |= (MoveGen::getPseudoBishopMoves(*this, kingSquare, this->allPieces) & this->pieces[this->info.whiteMove ? ColoredPiece::BLACK_BISHOP : ColoredPiece::WHITE_BISHOP]);
     
     // rook checks.
-    this->checkingPieces |= (MoveGen::getPseudoRookMoves(*this, kingSquare, this->allPieces) & this->pieces[this->info.whiteMove ? ColoredPiece::BLACK_ROOK : ColoredPiece::WHITE_ROOK]);
+    this->info.checkingPieces |= (MoveGen::getPseudoRookMoves(*this, kingSquare, this->allPieces) & this->pieces[this->info.whiteMove ? ColoredPiece::BLACK_ROOK : ColoredPiece::WHITE_ROOK]);
 
     // queen checks.
-    this->checkingPieces |= (MoveGen::getPseudoQueenMoves(*this, kingSquare, this->allPieces) & this->pieces[this->info.whiteMove ? ColoredPiece::BLACK_QUEEN : ColoredPiece::WHITE_QUEEN]);
+    this->info.checkingPieces |= (MoveGen::getPseudoQueenMoves(*this, kingSquare, this->allPieces) & this->pieces[this->info.whiteMove ? ColoredPiece::BLACK_QUEEN : ColoredPiece::WHITE_QUEEN]);
     
 	// pawn checks.
-	this->checkingPieces |= MoveGen::getPawnCaptures(this->pieces[this->info.whiteMove ? ColoredPiece::BLACK_PAWN : ColoredPiece::WHITE_PAWN], !this->info.whiteMove) & Constants::SQUARE_BBS[kingSquare];
+	this->info.checkingPieces |= MoveGen::getPawnCaptures(this->pieces[this->info.whiteMove ? ColoredPiece::BLACK_PAWN : ColoredPiece::WHITE_PAWN], !this->info.whiteMove) & Constants::SQUARE_BBS[kingSquare];
 }
 bool Board::isSquareAttacked(Index square, bitboard pieces) const {
     // knight attacks.
@@ -185,6 +185,12 @@ void Board::makeMove(Move move) {
 
     // handle capture.
     if (move.isCapture()) {
+        if (move.capture == Piece::NONE) {
+            std::cout << *this; 
+            Bitboard::printBitboard(this->getEnemyPieces());
+            Bitboard::printBitboard(this->getPieces(ColoredPiece::WHITE_PAWN));
+            std::cout << this->piecesArr[16] << '\n';
+        }
         if (move.type == MoveType::EnPassant) {
             Index capturedPawn = this->whiteToMove() ? move.to - 8 : move.to + 8;
             this->removePiece(PieceHelper::getColoredPieceType(move.capture, !this->whiteToMove()), capturedPawn, nonTurnPieces);
@@ -207,7 +213,7 @@ void Board::makeMove(Move move) {
     // handle promotion.
     if (move.isPromotion()) {
 		this->removePiece(PieceHelper::getColoredPieceType(move.piece, this->whiteToMove()), move.from, turnPieces);
-        this->removePiece(PieceHelper::getColoredPieceType(move.promote, this->whiteToMove()), move.to, turnPieces);
+        this->addPiece(PieceHelper::getColoredPieceType(move.promote, this->whiteToMove()), move.to, turnPieces);
     }
     else {
 		this->movePiece(PieceHelper::getColoredPieceType(move.piece, this->whiteToMove()), move.from, move.to, turnPieces);
@@ -287,5 +293,112 @@ void Board::makeMove(Move move) {
     this->calcPins();
 
     // check end.
-    //this->info.endState = GameResult::checkState(*this);
+    this->checkState();
+}
+
+void Board::unmakeMove() {
+    // get move.
+    Move move = this->lastMoves.top();
+    this->lastMoves.pop();
+
+    this->info.toggleTurn();
+    bitboard& turnPieces = this->whiteToMove() ? this->whitePieces : this->blackPieces;
+    bitboard& nonTurnPieces = this->whiteToMove() ? this->blackPieces : this->whitePieces;
+
+    // add the captured piece.
+    if (move.isCapture()) {
+        if (move.type == MoveType::EnPassant) {
+            Index capturedPawn = this->whiteToMove() ? move.to - 8 : move.to + 8;
+            this->addPiece(PieceHelper::getColoredPieceType(move.capture, !this->whiteToMove()), capturedPawn, nonTurnPieces);
+        }
+        else {
+            this->addPiece(PieceHelper::getColoredPieceType(move.capture, !this->whiteToMove()), move.to, nonTurnPieces);
+        }
+    }
+
+    // handle promotion.
+    if (move.isPromotion()) {
+        this->removePiece(PieceHelper::getColoredPieceType(move.promote, this->whiteToMove()), move.to, turnPieces);
+        this->addPiece(PieceHelper::getColoredPieceType(move.piece, this->whiteToMove()), move.from, turnPieces);
+    }
+    else {
+        this->movePiece(PieceHelper::getColoredPieceType(move.piece, this->whiteToMove()), move.to, move.from, turnPieces);
+    }
+
+    // handle castling.
+    if (move.isCastling()) {
+        Index sourceRookSquare, targetRookSquare;
+
+        if (this->whiteToMove()) {
+            if (move.type == MoveType::KingCastle) {
+                sourceRookSquare = Board::whiteRightRook;
+                targetRookSquare = Board::whiteRightRookCastle;
+            }
+            else {
+                sourceRookSquare = Board::whiteLeftRook;
+                targetRookSquare = Board::whiteLeftRookCastle;
+            }
+        }
+        else {
+            if (move.type == MoveType::KingCastle) {
+                sourceRookSquare = Board::blackRightRook;
+                targetRookSquare = Board::blackRightRookCastle;
+            }
+            else {
+                sourceRookSquare = Board::blackLeftRook;
+                targetRookSquare = Board::blackLeftRookCastle;
+            }
+        }
+
+        this->movePiece(PieceHelper::getColoredPieceType(Piece::ROOK, this->whiteToMove()), targetRookSquare, sourceRookSquare, turnPieces);
+    }
+
+    // handle board info.
+    this->info = this->lastBoardInfos.top();
+    this->lastBoardInfos.pop();
+
+    // handle position repetition.
+    if (--this->positionsRep[this->boardKey] == 0) {
+        this->positionsRep.erase(this->boardKey);
+    }
+
+    // handle position key.
+    this->boardKey = this->lastPositions.top();
+    this->lastPositions.pop();
+    this->threefoldRepetition = this->positionsRep[this->boardKey] >= 3;
+}
+
+void Board::checkState() {
+    // returns the board's state:
+    // p - continue playing.
+    // w - white wins.
+    // b - black wins.
+    // d - draw. 
+    this->info.endState = 'p';
+
+
+    // no possible moves.
+    if (MoveGen::hasLegalMoves(*this)) {
+        if (this->inCheck()) {
+            this->info.endState = this->whiteToMove() ? 'w' : 'b';
+        }
+        else {
+            this->info.endState = 'd';
+        }
+    }
+    // check draw.
+    else if (this->info.halfmoves == 100) {
+        this->info.endState = 'd';
+    }
+    //// check insufficient material.
+    //else if (board.getFriendlyPieces(PieceType::PAWN) == 0ULL && board.getFriendlyPieces(PieceType::QUEEN) == 0ULL && 
+    //        board.getFriendlyPieces(PieceType::ROOK) == 0ULL) {
+    //    // TODO: add logic for checking insufficient material
+    //    return state;
+    //}
+    else if (this->threefoldRepetition) {
+        this->info.endState = 'd';
+    }
+
+    
 }

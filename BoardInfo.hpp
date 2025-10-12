@@ -10,8 +10,6 @@ struct BoardInfo {
 	static constexpr bit blackLeftRook = 0b1ULL << 56;
 	static constexpr bit blackRightRook = 0b10000000ULL << 56;
 
-
-
 	// king starting positions.
 	static constexpr bit whiteKing = 0b10000ULL;
 	static constexpr bit blackKing = 0b10000ULL << 56;
@@ -43,8 +41,15 @@ public:
 	uint16_t halfmoves;
 	uint16_t fullmoves;
 
+	char endState;
+
+	bitboard checkingPieces;
+	bitboard rookPins;
+	bitboard bishopPins;
+
 	BoardInfo() : whiteMove(true), enPassantTarget(-1), whiteLeftCastle(true),
-		whiteRightCastle(true), blackLeftCastle(true), blackRightCastle(true), halfmoves(0), fullmoves(1)
+		whiteRightCastle(true), blackLeftCastle(true), blackRightCastle(true), halfmoves(0), fullmoves(1), endState('p'), 
+		checkingPieces(0ULL), rookPins(0ULL), bishopPins(0ULL)
 	{
 	}
 

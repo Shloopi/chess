@@ -30,9 +30,7 @@ private:
 	const static std::string defaultFen;
 
 	BoardInfo info;
-	bitboard checkingPieces;
-	bitboard rookPins;
-	bitboard bishopPins;
+
 
 	bitboard boardKey;
 	bitboard allPieces;
@@ -102,21 +100,23 @@ public:
 	Board(const std::string& fen) { this->init(fen); }
 	void makeMove(Move move);
 	void unmakeMove();
+	void checkState();
+	bitboard getKey() const { return this->boardKey; }
 	inline bitboard getPieces(ColoredPiece piece) const { return this->pieces[piece]; }
 	inline bitboard getPieces(Piece piece, bool white) const { return this->pieces[piece + (white ? 0 : 6)]; }
 	inline bitboard getAllPieces() const { return this->allPieces; }
 	inline bitboard getEnemyPieces() const { return this->info.whiteMove ? this->blackPieces : this->whitePieces; }
 	inline bitboard getFriendlyPieces() const { return this->info.whiteMove ? this->whitePieces : this->blackPieces; }
-	inline bitboard getPinnedPieces() const { return this->rookPins | this->bishopPins; }
-	inline bool isPinnedByBishop(Index square) const { return (Constants::SQUARE_BBS[square] & this->bishopPins) != 0; }
-	inline bool isPinnedByRook(Index square) const { return (Constants::SQUARE_BBS[square] & this->rookPins) != 0; }
+	inline bitboard getPinnedPieces() const { return this->info.rookPins | this->info.bishopPins; }
+	inline bool isPinnedByBishop(Index square) const { return (Constants::SQUARE_BBS[square] & this->info.bishopPins) != 0; }
+	inline bool isPinnedByRook(Index square) const { return (Constants::SQUARE_BBS[square] & this->info.rookPins) != 0; }
 	inline Index getEnPassantTarget() const { return this->info.enPassantTarget; }
-	inline Index getCheckingPiecePos() const { return Bitboard::lsb(this->checkingPieces); }
-	inline bool inCheck() const { return this->checkingPieces != 0; }
+	inline Index getCheckingPiecePos() const { return Bitboard::lsb(this->info.checkingPieces); }
+	inline bool inCheck() const { return this->info.checkingPieces != 0; }
 	inline bool whiteToMove() const { return this->info.whiteMove; }
-	short numOfChecks() const { return Bitboard::numOfBits(this->checkingPieces); }
-	inline bitboard getCheckingPieces() const { return this->checkingPieces; }
-	inline bitboard isPiecePinned(Index square) const { return (Constants::SQUARE_BBS[square] & (this->rookPins | this->bishopPins)) != 0; }
+	short numOfChecks() const { return Bitboard::numOfBits(this->info.checkingPieces); }
+	inline bitboard getCheckingPieces() const { return this->info.checkingPieces; }
+	inline bitboard isPiecePinned(Index square) const { return (Constants::SQUARE_BBS[square] & (this->info.rookPins | this->info.bishopPins)) != 0; }
 	inline ColoredPiece getColoredPieceOnSquare(Index square) const {
 		if (square > Chess::BOARD_SIZE) return ColoredPiece::COLORED_NONE;
 		return this->piecesArr[square];
@@ -135,7 +135,12 @@ public:
 	inline bool canCastleQueenside() const { return this->info.canCastleLeft(); }
 	bool isSquareAttacked(Index square, bitboard pieces) const;
 
-
+	// game over.
+	[[nodiscard]] bool whiteWins() const { return this->info.endState == 'w'; }
+	[[nodiscard]] bool blackWin() const { return this->info.endState == 'b'; }
+	[[nodiscard]] bool isDraw() const { return this->info.endState == 'd'; }
+	[[nodiscard]] bool isThreefoldRepetition() const { return this->threefoldRepetition; }
+	[[nodiscard]] bool gameOver() const { return this->whiteWins() || this->blackWin() || this->isDraw(); }
 };
 
 #endif
