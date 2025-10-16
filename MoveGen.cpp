@@ -50,13 +50,13 @@ namespace MagicGen {
         for (int i = 0; i < attacks.size(); i++) {
             sourceSquare = Square(i);
             moves = attacks[i];
-            if (forBishop) moves &= ~Bitboard::RANK0 & ~Bitboard::RANK7 & ~Bitboard::FILE_A & ~Bitboard::FILE_H;
+            if (forBishop) moves &= ~Chess::RANK1 & ~Chess::RANK8 & ~Chess::FILE_A & ~Chess::FILE_H;
             
 
             magicTable[i].resize(Constants::SQUARE_BBS[Chess::BOARD_SIZE - shifters[i]]);
 
 			// Generate all possible occupancies for the given moves.
-            std::vector<bitboard> occupancies(Constants::SQUARE_BBS[Bitboard::numOfBits(moves)]);
+            std::vector<bitboard> occupancies(Constants::SQUARE_BBS[Chess::numOfBits(moves)]);
 			genOccupancies(occupancies, moves);
 
             for (int j = 0; j < occupancies.size(); j++) {
@@ -85,7 +85,7 @@ namespace MoveGen {
         legalMoves |= (targetSquares & checkingPiece);
 
         // blocking the ray.
-        bitboard checkRay = Constants::BETWEEN_PIECES_TABLE[kingSquare][Bitboard::lsb(checkingPiece)];
+        bitboard checkRay = Constants::BETWEEN_PIECES_TABLE[kingSquare][Chess::lsb(checkingPiece)];
 
         legalMoves |= (checkRay & targetSquares);
 
@@ -99,7 +99,7 @@ namespace MoveGen {
 
 
         while (temp != 0ULL) {
-            targetSquare = Bitboard::popLSB(temp);
+            targetSquare = Chess::popLSB(temp);
             moveRay = Constants::BETWEEN_TABLE[sourceSquare][targetSquare];
 
             if ((kingSquare & moveRay) == 0ULL) targetSquares &= ~(1ULL << targetSquare);
@@ -115,7 +115,7 @@ namespace MoveGen {
         bitboard capturedPawn = board.whiteToMove() ? enPassantTarget >> 8 : enPassantTarget << 8;
 
         // get the rank of the capturing and captured pawns.
-        bitboard rankBB = board.whiteToMove() ? Bitboard::RANK4 : Bitboard::RANK3;
+        bitboard rankBB = board.whiteToMove() ? Chess::RANK5 : Chess::RANK4;
 
         if ((king & rankBB) == 0) return false;
 
@@ -127,7 +127,7 @@ namespace MoveGen {
         Index square;
 
         while (rookRayPieces != 0) {
-            square = Bitboard::popLSB(rookRayPieces);
+            square = Chess::popLSB(rookRayPieces);
 
             movesBitboard = MoveGen::getPseudoRookMoves(board, square, board.getAllPieces()) & rankBB;
 
@@ -148,7 +148,7 @@ namespace MoveGen {
         bitboard emptySquares = ~board.getAllPieces(), enemyPieces = board.getEnemyPieces(), enPassantBitboard = enPassantTarget == 64 ? 0ULL : (1ULL << enPassantTarget);
 
         // get the checking ray.
-        bitboard checkRay = board.inCheck() ? board.getCheckingPieces() | Constants::BETWEEN_PIECES_TABLE[board.getKingPos()][board.getCheckingPiecePos()] : Bitboard::MAX_BITBOARD;
+        bitboard checkRay = board.inCheck() ? board.getCheckingPieces() | Constants::BETWEEN_PIECES_TABLE[board.getKingPos()][board.getCheckingPiecePos()] : Chess::MAX_BITBOARD;
 
         // get non pinned pieces.
         bitboard nonPinnedPawns = pawns & ~board.getPinnedPieces();
@@ -166,7 +166,7 @@ namespace MoveGen {
         bitboard pinnedPawn;
 
         while (pinnedPawns != 0) {
-            square = Bitboard::popLSB(pinnedPawns);
+            square = Chess::popLSB(pinnedPawns);
             pinnedPawn = Constants::SQUARE_BBS[square];
 
             // get single, double and captures for this pinned pawn.
@@ -213,7 +213,7 @@ namespace MoveGen {
         // run for every move and check if the target square is attacked.
         while (tempBitboard != 0) {
             // get the index of the target square and remove it from the bitboard.
-            targetSquare = Bitboard::popLSB(tempBitboard);
+            targetSquare = Chess::popLSB(tempBitboard);
 
             // if the target square is attacked, remove it from the moves bitboard.
             if (board.isSquareAttacked(targetSquare, noKingPieces)) moveBitboard &= ~(1ULL << targetSquare);
@@ -284,7 +284,7 @@ namespace MoveGen {
 
         while (moveBitboard != 0ULL) {
             // get index of least-significant bit and remove the bit. 
-            square = Bitboard::popLSB(moveBitboard);
+            square = Chess::popLSB(moveBitboard);
 
             moveType = MoveGen::calcMoveType<T>(sourceSquare, square, enemyPieces);
 
@@ -321,7 +321,7 @@ namespace MoveGen {
         Piece capturedPiece;
         Index square, sourceSquare;
 
-        bitboard promoMoves = moveBitboard & (Bitboard::RANK0 | Bitboard::RANK7);
+        bitboard promoMoves = moveBitboard & (Chess::RANK0 | Chess::RANK8);
         bitboard quietMoves = moveBitboard ^ promoMoves;
         Index enPassant = board.getEnPassantTarget();
 
@@ -329,7 +329,7 @@ namespace MoveGen {
 
         while (quietMoves != 0ULL) {
             // get index of least-significant bit and remove the bit. 
-            square = Bitboard::popLSB(quietMoves);
+            square = Chess::popLSB(quietMoves);
             sourceSquare = square - StartSquareDelta;
 
             if (square == enPassant) {
@@ -345,7 +345,7 @@ namespace MoveGen {
 
         while (promoMoves != 0ULL) {
             // get index of least-significant bit and remove the bit. 
-            square = Bitboard::popLSB(promoMoves);
+            square = Chess::popLSB(promoMoves);
             sourceSquare = square - StartSquareDelta;
 
             if (moveType == MoveType::Capture) {
@@ -427,7 +427,7 @@ namespace MoveGen {
 
         // insert all other piece moves.
         while (nonPawnPieces != 0) {
-            square = Bitboard::popLSB(nonPawnPieces);
+            square = Chess::popLSB(nonPawnPieces);
 
             MoveGen::genLegalHumanMoves(board, square, moves, moveCount);
         }
@@ -452,7 +452,7 @@ namespace MoveGen {
 
         // insert all other piece moves.
         while (nonPawnPieces != 0) {
-            square = Bitboard::popLSB(nonPawnPieces);
+            square = Chess::popLSB(nonPawnPieces);
             
             piece = board.getPieceOnSquare(square);
 

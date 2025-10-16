@@ -3,15 +3,15 @@
 
 #include <string>
 #include <array>
-#include "Bitboard.hpp"
 #include "BoardInfo.hpp"
+#include "Board.hpp"
 
 namespace Fen {
 
     // generate from fen (all 6 parts of the fen).
-    void generatePieces(const std::string& fenPieces, std::array<bitboard, 12>& pieces);
-    void generateCastlingRights(const std::string_view& fenCastlingRights, BoardInfo& state);
-    void handleFen(const std::string& fen, std::array<bitboard, 12>& pieces, BoardInfo& state);
+    void generatePieces(Board& board, const std::string& fenPieces);
+    void generateCastlingRights(Board& board, const std::string_view& fenCastlingRights);
+    Board handleFen(const std::string& fen, BoardInfo& state);
 
     // get fen from position.
     //std::string genFen(const Board& board) { return ""; }

@@ -4,7 +4,6 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
-#include "Piece.hpp"
 
 static void split(std::vector<std::string>& splittedFen, const std::string& str, char delimiter) {
     std::stringstream strStream(str);
@@ -14,25 +13,36 @@ static void split(std::vector<std::string>& splittedFen, const std::string& str,
         splittedFen.push_back(substr);
     }
 }
+static Piece getPieceHelper(char c) {
+    if (c == 'P' || c == 'p') return Chess::PAWN;
+    if (c == 'N' || c == 'n') return Chess::KNIGHT;
+    if (c == 'B' || c == 'b') return Chess::BISHOP;
+    if (c == 'R' || c == 'r') return Chess::ROOK;
+    if (c == 'Q' || c == 'q') return Chess::QUEEN;
+    if (c == 'K' || c == 'k') return Chess::KING;
+    throw std::invalid_argument("FenHandler::getPiece - invalid piece character");
+}
 
 namespace Fen {
-    void handleFen(const std::string& fen, std::array<bitboard, 12>& pieces, BoardInfo& state) {
+    Board handleFen(const std::string& fen, BoardInfo& state) {
+        Board board;
         std::vector<std::string> splittedFen;
         split(splittedFen, fen, ' ');
 
         if (splittedFen.size() != 6) throw std::invalid_argument("Fen::Fen - fen does not contains all variables - " + fen);
 
-        generatePieces(splittedFen[0], pieces);
+        generatePieces(board, splittedFen[0]);
         state.whiteMove = splittedFen[1] == "w";
-        generateCastlingRights(splittedFen[2], state);
-        state.enPassantTarget = splittedFen[3] == "-" ? -1 : Square::getIndex(splittedFen[3]);
+        generateCastlingRights(board, splittedFen[2]);
+		board.enPassant = splittedFen[3] == "-" ? -1 : Square::getIndex(splittedFen[3]);
         state.halfmoves = std::stoi(splittedFen[4]);
         state.fullmoves = std::stoi(splittedFen[5]);
+
+
+        return board;
     }
 
-    void generatePieces(const std::string& fenPieces, std::array<bitboard, 12>& pieces) {
-        for (int i = 0; i < pieces.size(); i++) pieces[i] = 0ULL;
-
+    void generatePieces(Board& board, const std::string& fenPieces) {
         std::vector<std::string> rows;
         split(rows, fenPieces, '/');
 
@@ -42,17 +52,21 @@ namespace Fen {
         int counter = 0;
 
         for (int i = (rows.size() - 1); i >= 0; i--) {
-            for (char c : rows[i]) {
+            for (unsigned char c : rows[i]) {
                 // if the character is a digit, add the squares to the counter.
                 if (std::isdigit(c)) {
                     counter += (c - '0');
                 }
                 // otherwise, it's representing a piece type and color.
                 else {
-					ColoredPiece type = PieceHelper::getPiece(c);
-
-                    // add the piece to the correct PieceList.
-                    pieces[type] |= Constants::SQUARE_BBS[counter];
+					Piece type = getPieceHelper(c);
+                    
+                    if (std::isupper(c)) {
+						board.setPiece<true>(type, counter);
+                    }
+                    else {
+                        board.setPiece<false>(type, counter);
+                    }
 
                     counter++;
                 }
@@ -60,31 +74,33 @@ namespace Fen {
         }
     }
 
-    void generateCastlingRights(const std::string_view& fenCastlingRights, BoardInfo& state) {
-        state.whiteLeftCastle = false;
-        state.whiteRightCastle = false;
-        state.blackLeftCastle = false;
-        state.blackRightCastle = false;
+    void generateCastlingRights(Board& board, const std::string_view& fenCastlingRights) {
+        bool whiteLeftCastle = false;
+        bool whiteRightCastle = false;
+        bool blackLeftCastle = false;
+        bool blackRightCastle = false;
 
         if (fenCastlingRights != "-") {
             for (char c : fenCastlingRights) {
                 switch (c) {
                 case 'K':
-                    state.whiteRightCastle = true;
+                    whiteRightCastle = true;
                     break;
                 case 'Q':
-                    state.whiteLeftCastle = true;
+                    whiteLeftCastle = true;
                     break;
                 case 'k':
-                    state.blackRightCastle = true;
+                    blackRightCastle = true;
                     break;
                 case 'q':
-                    state.blackLeftCastle = true;
+                    blackLeftCastle = true;
                     break;
                 default:
                     throw std::invalid_argument("FenHandler::generateCastlingRights - fen castling rights invalid character");
                 }
             }
         }
+
+		board.setCastlingRights(whiteLeftCastle, whiteRightCastle, blackLeftCastle, blackRightCastle);
     }
 }

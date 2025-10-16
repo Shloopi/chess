@@ -29,15 +29,12 @@ namespace Zobrist {
     }
     bitboard Zobrist::genKey(bool whiteToMove) { return Zobrist::turnRandom[whiteToMove]; }
 
-    bitboard Zobrist::applyPiece(bitboard key, bool color, Piece piece, Index square) {
-        bitboard pieceRandom = Zobrist::piecesRandom[color][piece][square];
+    bitboard Zobrist::applyPiece(bitboard key, bool whiteToMove, Piece piece, Index square) {
+        bitboard pieceRandom = Zobrist::piecesRandom[whiteToMove][piece][square];
 
         key ^= pieceRandom;
 
         return key;
-    }
-    bitboard Zobrist::applyPiece(bitboard key, ColoredPiece piece, Index square) {
-		return Zobrist::applyPiece(key, piece < 6, static_cast<Piece>(piece % 6), square);
     }
 
     bitboard Zobrist::applyBoardInfo(bitboard key, const BoardInfo& info) {

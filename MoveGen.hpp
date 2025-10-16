@@ -3,7 +3,6 @@
 
 #include <array>
 #include <vector>
-#include "Bitboard.hpp"
 #include "Chess.hpp"
 #include "Board.hpp"
 
@@ -42,13 +41,13 @@ namespace MoveGen {
 	bitboard genLegalKingMoves(const Board& board, Index square);
 	bool enPassantExposeKing(const Board& board, bitboard enPassantTarget, bitboard capturingPawn);
 	inline bitboard calcSinglePawnPushes(const bitboard& pawns, const bitboard& emptySquares, const bool whiteToMove) { return (whiteToMove ? (pawns << 8) : (pawns >> 8)) & emptySquares; }
-	inline bitboard calcDoublePawnPushes(const bitboard& singlePushes, const bitboard& emptySquares, const bool whiteToMove) { return whiteToMove ? (singlePushes << 8) & emptySquares & Bitboard::RANK3 : (singlePushes >> 8) & emptySquares & Bitboard::RANK4; }
-	inline bitboard calcLeftPawnCaptures(const bitboard& pawns, const bitboard& captureSquares, const bool whiteToMove) { return whiteToMove ? ((pawns & (~Bitboard::FILE_A)) << 7) & captureSquares : ((pawns & (~Bitboard::FILE_A)) >> 9) & captureSquares; }
-	inline bitboard calcRightPawnCaptures(const bitboard& pawns, const bitboard& captureSquares, const bool whiteToMove) { return whiteToMove ? (((pawns & (~Bitboard::FILE_H)) << 9) & captureSquares) : (((pawns & (~Bitboard::FILE_H)) >> 7) & captureSquares); }
+	inline bitboard calcDoublePawnPushes(const bitboard& singlePushes, const bitboard& emptySquares, const bool whiteToMove) { return whiteToMove ? (singlePushes << 8) & emptySquares & Chess::RANK4 : (singlePushes >> 8) & emptySquares & Chess::RANK5; }
+	inline bitboard calcLeftPawnCaptures(const bitboard& pawns, const bitboard& captureSquares, const bool whiteToMove) { return whiteToMove ? ((pawns & (~Chess::FILE_A)) << 7) & captureSquares : ((pawns & (~Chess::FILE_A)) >> 9) & captureSquares; }
+	inline bitboard calcRightPawnCaptures(const bitboard& pawns, const bitboard& captureSquares, const bool whiteToMove) { return whiteToMove ? (((pawns & (~Chess::FILE_H)) << 9) & captureSquares) : (((pawns & (~Chess::FILE_H)) >> 7) & captureSquares); }
 	bool hasLegalMoves(const Board& board);
 	static bitboard getPawnCaptures(bitboard pawns, bool whiteToMove) {
-		return MoveGen::calcLeftPawnCaptures(pawns, Bitboard::MAX_BITBOARD, whiteToMove) |
-			MoveGen::calcRightPawnCaptures(pawns, Bitboard::MAX_BITBOARD, whiteToMove);
+		return MoveGen::calcLeftPawnCaptures(pawns, Chess::MAX_BITBOARD, whiteToMove) |
+			MoveGen::calcRightPawnCaptures(pawns, Chess::MAX_BITBOARD, whiteToMove);
 	}
 	inline bitboard getPseudoBishopMoves(const Board& board, Index index, bitboard occupancy) {
 		return MagicGen::bishopMagicTable[index][MagicGen::genMagicIndex(

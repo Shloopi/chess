@@ -2,9 +2,9 @@
 #define ZOBRIST_HPP
 
 #include <random>
-#include "Bitboard.hpp"
 #include "BoardInfo.hpp"
-#include "Piece.hpp"
+#include "Chess.hpp"
+#include <array>
 
 namespace Zobrist {
     inline std::array<std::array<std::array<bitboard, 64>, 6>, 2> piecesRandom;
@@ -15,8 +15,8 @@ namespace Zobrist {
 
     void init();
     bitboard genKey(bool whiteToMove);
-    bitboard applyPiece(bitboard key, bool color, Piece piece, Index square);
-    bitboard applyPiece(bitboard key, ColoredPiece piece, Index square);
+
+    bitboard applyPiece(bitboard key, bool whiteToMove, Piece piece, Index square);
     bitboard applyTurn(bitboard key, bool whiteToMove);
     bitboard applyBoardInfo(bitboard key, const BoardInfo& info);
 
