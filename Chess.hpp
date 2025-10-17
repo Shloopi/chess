@@ -215,7 +215,18 @@ namespace Chess {
 		else return RANK8;
 	}
 
+	constexpr Move NULL_MOVE;
+
 }; 
+
+struct Move {
+	Index from, to;
+	Piece piece;
+	Flag flag;
+	Move() : from(0), to(0), piece(0), flag(0) {}
+	Move(Index from, Index to, Piece piece, Flag flag) : from(from), to(to), piece(piece), flag(flag) {}
+};
+
 struct Square {
 	constexpr static File NULL_FILE = -1;
 	constexpr static Rank NULL_RANK = -1;
