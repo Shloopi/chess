@@ -1,4 +1,5 @@
 #include "MoveGen.hpp"
+#include "BoardState.hpp"
 
 namespace MagicGen {
     void genOccupancies(std::vector<bitboard>& occupancies, bitboard moves) {
@@ -70,16 +71,18 @@ namespace MagicGen {
 }
 
 namespace MoveGen {
-    bitboard MoveGen::movesLegalityWhileChecked(const Board& board, Index sourceSquare, bitboard targetSquares) {
+
+    template <bool whiteToMove>
+    bitboard movesLegalityWhileChecked(const BoardState& state, Index sourceSquare, bitboard targetSquares) {
         // if there is no check, return all moves.
-        if (!board.inCheck()) return targetSquares;
+        if (!state.inCheck()) return targetSquares;
 
         // if there are 2 checks, only king moves are legal.
-        if (board.numOfChecks() > 1) return 0ULL;
+        if (state.numOfChecks() > 1) return 0ULL;
 
         // calculate if moves are legal when there is one checking piece.
-        bitboard legalMoves = 0ULL, checkingPiece = board.getCheckingPieces();
-        Index kingSquare = board.getKingPos();
+        bitboard legalMoves = 0ULL;
+        Index kingSquare = state.board.getKing<whiteToMove>();
 
         // capturing the enemy checking piece.
         legalMoves |= (targetSquares & checkingPiece);
@@ -91,10 +94,12 @@ namespace MoveGen {
 
         return legalMoves;
     }
-    bitboard MoveGen::reducePinnedPiecesMoves(const Board& board, Index sourceSquare, bitboard targetSquares) {
-        if (!board.isPiecePinned(sourceSquare)) return targetSquares;
 
-        bitboard moveRay, temp = targetSquares, kingSquare = board.getKingPos();
+	template <bool whiteToMove>
+    bitboard reducePinnedPiecesMoves(const BoardState& state, Index sourceSquare, bitboard targetSquares) {
+        if (!state.isPiecePinned(sourceSquare)) return targetSquares;
+
+        bitboard moveRay, temp = targetSquares, kingSquare = state.board.getKing<whiteToMove>();
         Index targetSquare;
 
 
@@ -102,67 +107,74 @@ namespace MoveGen {
             targetSquare = Chess::popLSB(temp);
             moveRay = Constants::BETWEEN_TABLE[sourceSquare][targetSquare];
 
-            if ((kingSquare & moveRay) == 0ULL) targetSquares &= ~(1ULL << targetSquare);
+            if ((kingSquare & moveRay) == 0ULL) targetSquares &= ~Constants::SQUARE_BBS[targetSquare];
         }
 
         return targetSquares;
     }
-    bool MoveGen::enPassantExposeKing(const Board& board, bitboard enPassantTarget, bitboard capturingPawn) {
+
+	template <bool whiteToMove>
+    bool enPassantExposeKing(const Board& board, bitboard enPassantTarget, bitboard capturingPawn) {
+        bitboard allPieces = board.getAllPieces();
         // king pos
-        Index kingPos = board.getKingPos();
+        Index kingPos = board.getKing<whiteToMove>();
 		bitboard king = Constants::SQUARE_BBS[kingPos];
 
-        bitboard capturedPawn = board.whiteToMove() ? enPassantTarget >> 8 : enPassantTarget << 8;
+        bitboard capturedPawn = Chess::pawnBackward<whiteToMove>(enPassantTarget);
 
         // get the rank of the capturing and captured pawns.
-        bitboard rankBB = board.whiteToMove() ? Chess::RANK5 : Chess::RANK4;
-
+        bitboard rankBB = Chess::enPassantRank<whiteToMove>();
+        
         if ((king & rankBB) == 0) return false;
 
         // calculate the king's ray.
-        bitboard kingRay = MoveGen::getPseudoRookMoves(board, kingPos, board.getAllPieces()) & rankBB;
+        bitboard kingRay = MoveGen::getPseudoRookMoves(board, kingPos, allPieces) & rankBB;
         if ((kingRay & capturingPawn) == 0 && (kingRay & capturedPawn) == 0) return false;
 
-        bitboard movesBitboard, rookRayPieces = (board.getPieces(Piece::ROOK, !board.whiteToMove()) | board.getPieces(Piece::QUEEN, board.whiteToMove())) & rankBB;
+        bitboard movesBitboard, rookRayPieces = (board.getRooks<!whiteToMove>() | board.getQueens<!whiteToMove>()) & rankBB;
         Index square;
 
         while (rookRayPieces != 0) {
             square = Chess::popLSB(rookRayPieces);
 
-            movesBitboard = MoveGen::getPseudoRookMoves(board, square, board.getAllPieces()) & rankBB;
+            movesBitboard = MoveGen::getPseudoRookMoves(board, square, allPieces) & rankBB;
 
             if ((movesBitboard & capturingPawn) != 0 || (movesBitboard & capturedPawn) != 0) return true;
         }
 
         return false;
     }
-    bitboard MoveGen::genBitboardLegalPawnMoves(const Board& board, bitboard pawns) {
+
+	template <bool whiteToMove>
+    bitboard genBitboardLegalPawnMoves(const BoardState& state, bitboard pawns) {
         bitboard singlePushes, doublePushes, leftCaptures, rightCaptures;
-        MoveGen::genBitboardsLegalPawnMoves(board, pawns, singlePushes, doublePushes, leftCaptures, rightCaptures);
+        MoveGen::genBitboardsLegalPawnMoves<whiteToMove>(state, pawns, singlePushes, doublePushes, leftCaptures, rightCaptures);
 
         return singlePushes | doublePushes | leftCaptures | rightCaptures;
     }
-    void MoveGen::genBitboardsLegalPawnMoves(const Board& board, bitboard pawns, bitboard& singlePushes, bitboard& doublePushes, bitboard& leftCaptures, bitboard& rightCaptures) {
+
+	template <bool whiteToMove>
+    void genBitboardsLegalPawnMoves(const BoardState& state, bitboard pawns, bitboard& singlePushes, bitboard& doublePushes, bitboard& leftCaptures, bitboard& rightCaptures) {
         bitboard singlePushesTemp, doublePushesTemp, leftCapturesTemp, rightCapturesTemp;
-        Index enPassantTarget = board.getEnPassantTarget(), square;
-        bitboard emptySquares = ~board.getAllPieces(), enemyPieces = board.getEnemyPieces(), enPassantBitboard = enPassantTarget == 64 ? 0ULL : (1ULL << enPassantTarget);
+        bitboard enPassantBitboard = state.board.enPassant, square;
+        bitboard emptySquares = state.board.getFreeSquares(), enemyPieces = state.board.getEnemyPieces<whiteToMove>();
 
         // get the checking ray.
-        bitboard checkRay = board.inCheck() ? board.getCheckingPieces() | Constants::BETWEEN_PIECES_TABLE[board.getKingPos()][board.getCheckingPiecePos()] : Chess::MAX_BITBOARD;
+        bitboard checkRay = state.inCheck() ? state.checkingPieces | Constants::BETWEEN_PIECES_TABLE[board.getKingPos()][board.getCheckingPiecePos()] : Chess::MAX_BITBOARD;
 
         // get non pinned pieces.
-        bitboard nonPinnedPawns = pawns & ~board.getPinnedPieces();
+        bitboard nonPinnedPawns = pawns & ~state.getPinnedPieces();
 
         // generate single and double pushes, left and right captures for non pinned pawns.
         // if in check, keep moves that block or captures the checking piece.
-        singlePushes = MoveGen::calcSinglePawnPushes(nonPinnedPawns, emptySquares, board.whiteToMove());
-        doublePushes = MoveGen::calcDoublePawnPushes(singlePushes, emptySquares, board.whiteToMove()) & checkRay;
+        singlePushes = Chess::pawnForward<whiteToMove>(nonPinnedPawns) & emptySquares;
+        doublePushes = Chess::pawnForward<whiteToMove>(singlePushes) & emptySquares & Chess::doublePushRank<whiteToMove>() & checkRay;
         singlePushes &= checkRay;
-        leftCaptures = MoveGen::calcLeftPawnCaptures(nonPinnedPawns, enemyPieces | enPassantBitboard, board.whiteToMove()) & checkRay;
-        rightCaptures = MoveGen::calcRightPawnCaptures(nonPinnedPawns, enemyPieces | enPassantBitboard, board.whiteToMove()) & checkRay;
+        leftCaptures = Chess::pawnAttackLeft<whiteToMove>(nonPinnedPawns) & Chess::pawnLeftMask<whiteToMove>() & (enemyPieces | enPassantBitboard) & checkRay;
+        rightCaptures = Chess::pawnAttackRight<whiteToMove>(nonPinnedPawns) & Chess::pawnRightMask<whiteToMove>() & (enemyPieces | enPassantBitboard) & checkRay;
 
         // generate pinned pawn moves.
-        bitboard pinnedPawns = pawns & board.getPinnedPieces();
+        bitboard pinnedPawns = pawns & state.getPinnedPieces();
         bitboard pinnedPawn;
 
         while (pinnedPawns != 0) {
@@ -170,10 +182,12 @@ namespace MoveGen {
             pinnedPawn = Constants::SQUARE_BBS[square];
 
             // get single, double and captures for this pinned pawn.
-            singlePushesTemp = MoveGen::calcSinglePawnPushes(pinnedPawn, emptySquares, board.whiteToMove());
-            doublePushesTemp = MoveGen::calcDoublePawnPushes(singlePushesTemp, emptySquares, board.whiteToMove()) & checkRay;
+            singlePushesTemp = Chess::pawnForward<whiteToMove>(pinnedPawn) & emptySquares;
+            doublePushesTemp = Chess::pawnForward<whiteToMove>(singlePushesTemp) & emptySquares & Chess::doublePushRank<whiteToMove>() & checkRay;
             singlePushesTemp &= checkRay;
-            leftCapturesTemp = MoveGen::calcLeftPawnCaptures(pinnedPawn, enemyPieces | enPassantBitboard, board.whiteToMove()) & checkRay;
+            leftCapturesTemp = Chess::pawnAttackLeft<whiteToMove>(pinnedPawn) & Chess::pawnLeftMask<whiteToMove>() & (enemyPieces | enPassantBitboard) & checkRay;
+            rightCapturesTemp = Chess::pawnAttackRight<whiteToMove>(pinnedPawn) & Chess::pawnRightMask<whiteToMove>() & (enemyPieces | enPassantBitboard) & checkRay;
+
             rightCapturesTemp = MoveGen::calcRightPawnCaptures(pinnedPawn, enemyPieces | enPassantBitboard, board.whiteToMove()) & checkRay;
 
             // remove moves that does not block check or move away from a pin.
@@ -203,10 +217,12 @@ namespace MoveGen {
             if (MoveGen::enPassantExposeKing(board, enPassantBitboard, capturingPawn)) rightCaptures &= ~enPassantBitboard;
         }
     }
-    bitboard MoveGen::genLegalKingMoves(const Board& board, Index square) {
-        bitboard pieces = board.getAllPieces();
-        bitboard noKingPieces = pieces & ~(1ULL << square);
-        bitboard moveBitboard = MoveGen::getPseudoKingMoves(board, square);
+
+	template <bool whiteToMove>
+    bitboard genLegalKingMoves(const BoardState state, Index square) {
+        bitboard pieces = state.board.getAllPieces();
+        bitboard noKingPieces = pieces & ~Constants::SQUARE_BBS[square];
+        bitboard moveBitboard = MoveGen::getPseudoKingMoves<whiteToMove>(state.board, square);
         bitboard tempBitboard = moveBitboard;
         Index targetSquare, targetCastlingSquare;
 
@@ -216,9 +232,9 @@ namespace MoveGen {
             targetSquare = Chess::popLSB(tempBitboard);
 
             // if the target square is attacked, remove it from the moves bitboard.
-            if (board.isSquareAttacked(targetSquare, noKingPieces)) moveBitboard &= ~(1ULL << targetSquare);
+            if (state.isSquareAttacked(targetSquare, noKingPieces)) moveBitboard &= ~Constants::SQUARE_BBS[targetSquare];
         }
-
+        // TODO - i am here
         // check for kingside castling.
         targetCastlingSquare = square + 2;
 
@@ -233,6 +249,7 @@ namespace MoveGen {
         }
         return moveBitboard;
     }
+
     template <Piece T>
     bitboard genLegalMoves(const Board& board, Index square) {
         bitboard movesBitboard = 0ULL;

@@ -11,6 +11,7 @@ using Rank = int8_t;
 using Index = int8_t;
 using Piece = uint8_t;
 using Flag = uint8_t;
+struct Move;
 
 namespace Chess {
 	constexpr uint64_t BOARD_SIZE = 64;
@@ -76,6 +77,12 @@ namespace Chess {
 	static constexpr inline bitboard enPassantRank() {
 		if constexpr (whiteToMove) return RANK5;
 		else return RANK4;
+	}
+
+	template <bool whiteToMove>
+	static constexpr inline bitboard doublePushRank() {
+		if constexpr (whiteToMove) return RANK4;
+		else return RANK5;
 	}
 
 	template <bool whiteToMove>
@@ -216,7 +223,6 @@ namespace Chess {
 	}
 
 	constexpr Move NULL_MOVE;
-
 }; 
 
 struct Move {
@@ -263,6 +269,15 @@ struct Square {
 
 		return std::string(1, 'a' + s.file) + std::string(1, '1' + s.rank);
 	}
+};
+
+enum class EndState : uint8_t {
+	ONGOING,
+	CHECKMATE,
+	STALEMATE,
+	DRAW_BY_INSUFFICIENT_MATERIAL,
+	DRAW_BY_FIFTY_MOVE_RULE,
+	DRAW_BY_THREEFOLD_REPETITION
 };
 
 #endif

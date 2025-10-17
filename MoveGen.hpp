@@ -5,6 +5,7 @@
 #include <vector>
 #include "Chess.hpp"
 #include "Board.hpp"
+#include "BoardState.hpp"
 
 namespace Directions {
 	constexpr inline std::array<Square, 4> bishopDirections = { Square(1, 1), Square(1, -1), Square(-1, 1), Square(-1, -1) };
@@ -24,10 +25,20 @@ namespace MoveGen {
 		MagicGen::genMagicTable(true);
 		MagicGen::genMagicTable(false);
 	}
-	bitboard movesLegalityWhileChecked(const Board& board, Index sourceSquare, bitboard targetSquares);
-	bitboard reducePinnedPiecesMoves(const Board& board, Index sourceSquare, bitboard targetSquares);
-	bitboard genBitboardLegalPawnMoves(const Board& board, bitboard pawns);
-	void genBitboardsLegalPawnMoves(const Board& board, bitboard pawns, bitboard& singlePushes, bitboard& doublePushes, bitboard& leftCaptures, bitboard& rightCaptures);
+	template <bool whiteToMove>
+	bitboard movesLegalityWhileChecked(const BoardState& state, Index sourceSquare, bitboard targetSquares);
+
+	template <bool whiteToMove>
+	bitboard reducePinnedPiecesMoves(const BoardState& state, Index sourceSquare, bitboard targetSquares);
+
+	template <bool whiteToMove>
+	bool enPassantExposeKing(const Board& board, bitboard enPassantTarget, bitboard capturingPawn);
+
+	template <bool whiteToMove>
+	bitboard genBitboardLegalPawnMoves(const BoardState& state, bitboard pawns);
+
+	template <bool whiteToMove>
+	void genBitboardsLegalPawnMoves(const BoardState& state, bitboard pawns, bitboard& singlePushes, bitboard& doublePushes, bitboard& leftCaptures, bitboard& rightCaptures);
 	template <Piece T>
 	bitboard genLegalMoves(const Board& board, Index square);
 	template<Piece T>
@@ -39,41 +50,46 @@ namespace MoveGen {
 	unsigned short genAllLegalMoves(const Board& board, Move* moves);
 	void genLegalHumanMoves(const Board& board, Index square, Move* moves, unsigned short& moveCount);
 	bitboard genLegalKingMoves(const Board& board, Index square);
-	bool enPassantExposeKing(const Board& board, bitboard enPassantTarget, bitboard capturingPawn);
-	inline bitboard calcSinglePawnPushes(const bitboard& pawns, const bitboard& emptySquares, const bool whiteToMove) { return (whiteToMove ? (pawns << 8) : (pawns >> 8)) & emptySquares; }
-	inline bitboard calcDoublePawnPushes(const bitboard& singlePushes, const bitboard& emptySquares, const bool whiteToMove) { return whiteToMove ? (singlePushes << 8) & emptySquares & Chess::RANK4 : (singlePushes >> 8) & emptySquares & Chess::RANK5; }
-	inline bitboard calcLeftPawnCaptures(const bitboard& pawns, const bitboard& captureSquares, const bool whiteToMove) { return whiteToMove ? ((pawns & (~Chess::FILE_A)) << 7) & captureSquares : ((pawns & (~Chess::FILE_A)) >> 9) & captureSquares; }
-	inline bitboard calcRightPawnCaptures(const bitboard& pawns, const bitboard& captureSquares, const bool whiteToMove) { return whiteToMove ? (((pawns & (~Chess::FILE_H)) << 9) & captureSquares) : (((pawns & (~Chess::FILE_H)) >> 7) & captureSquares); }
+
 	bool hasLegalMoves(const Board& board);
-	static bitboard getPawnCaptures(bitboard pawns, bool whiteToMove) {
-		return MoveGen::calcLeftPawnCaptures(pawns, Chess::MAX_BITBOARD, whiteToMove) |
-			MoveGen::calcRightPawnCaptures(pawns, Chess::MAX_BITBOARD, whiteToMove);
+
+	template <bool whiteToMove>
+	static bitboard getPawnCaptures(bitboard pawns) {
+		return (Chess::pawnAttackLeft<whiteToMove>(pawns) & Chess::pawnLeftMask<whiteToMove>()) |
+			(Chess::pawnAttackRight<whiteToMove>(pawns) & Chess::pawnRightMask<whiteToMove>());
 	}
+
+	template <bool whiteToMove>
 	inline bitboard getPseudoBishopMoves(const Board& board, Index index, bitboard occupancy) {
 		return MagicGen::bishopMagicTable[index][MagicGen::genMagicIndex(
 			occupancy & Constants::BISHOP_ATTACKS_NO_LAST_SQUARE[index],
 			Constants::BISHOP_MAGIC_NUMBERS[index],
 			Constants::BISHOP_SHIFTERS[index]
-		)] & ~board.getFriendlyPieces();
+		)] & board.notFriendlyPieces<whiteToMove>();
 	}
+
+	template <bool whiteToMove>
 	inline bitboard getPseudoRookMoves(const Board& board, Index index, bitboard occupancy) {
 		return MagicGen::rookMagicTable[index][MagicGen::genMagicIndex(
 			occupancy & Constants::ROOK_ATTACKS_NO_LAST_SQUARE[index],
 			Constants::ROOK_MAGIC_NUMBERS[index],
 			Constants::ROOK_SHIFTERS[index]
-		)] & ~board.getFriendlyPieces();
+		)] & board.notFriendlyPieces<whiteToMove>();
 	}
 
+	template <bool whiteToMove>
 	inline bitboard getPseudoQueenMoves(const Board& board, Index index, bitboard occupancy) {
-		return getPseudoBishopMoves(board, index, occupancy) | getPseudoRookMoves(board, index, occupancy);
+		return MoveGen::getPseudoBishopMoves<whiteToMove>(board, index, occupancy) | MoveGen::getPseudoRookMoves<whiteToMove>(board, index, occupancy);
 	}
 
+	template <bool whiteToMove>
 	inline bitboard getPseudoKnightMoves(const Board& board, Index index) {
-		return Constants::KNIGHT_MOVES[index] & ~board.getFriendlyPieces();
+		return Constants::KNIGHT_MOVES[index] & board.notFriendlyPieces<whiteToMove>();
 	}
 
+	template <bool whiteToMove>
 	inline bitboard getPseudoKingMoves(const Board& board, Index index) {
-		return Constants::KING_MOVES[index] & ~board.getFriendlyPieces();
+		return Constants::KING_MOVES[index] & board.notFriendlyPieces<whiteToMove>();
 	}
 }
 

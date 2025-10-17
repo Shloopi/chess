@@ -7,7 +7,6 @@
 #include "Fen.hpp"
 #include <unordered_map>
 #include <stack>
-#include "BoardInfo.hpp"
 #include <functional>
 #include "Constants.hpp"
 
@@ -51,12 +50,12 @@ public:
 	{}
 
 	template <bool whiteToMove>
-	constexpr inline bitboard startingRooks() {
+	constexpr inline bitboard startingRooks() const {
 		return this->getLeftRookStartingPos<whiteToMove>() | this->getRightRookStartingPos<whiteToMove>();
 	}
 
 	template <bool whiteToMove>
-	constexpr inline bitboard startingQueensideRook() {
+	constexpr inline bitboard startingQueensideRook() const {
 		if constexpr (whiteToMove) {
 			return Board::whiteQueensideRook;
 		}
@@ -66,7 +65,7 @@ public:
 	}
 
 	template <bool whiteToMove> 
-	constexpr inline bitboard startingKingsideRook() {
+	constexpr inline bitboard startingKingsideRook() const {
 		if constexpr (whiteToMove) {
 			return Board::whiteKingsideRook;
 		}
@@ -76,7 +75,7 @@ public:
 	}
 
 	template <bool whiteToMove>
-	constexpr inline bitboard getRookShortCastlingMove() {
+	constexpr inline bitboard getRookShortCastlingMove() const {
 		if constexpr (whiteToMove) {
 			return Board::whiteKingsideRook | Board::whiteRookShortCastle;
 		}
@@ -86,7 +85,7 @@ public:
 	}
 
 	template <bool whiteToMove>
-	constexpr inline bitboard getRookLongCastlingMove() {
+	constexpr inline bitboard getRookLongCastlingMove() const {
 		if constexpr (whiteToMove) {
 			return Board::whiteQueensideRook | Board::whiteRookLongCastle;
 		}
@@ -96,7 +95,7 @@ public:
 	}
 
 	template <bool whiteToMove>
-	constexpr inline bitboard getPawns() {
+	constexpr inline bitboard getPawns() const {
 		if constexpr (whiteToMove) {
 			return this->whitePawns;
 		}
@@ -106,7 +105,7 @@ public:
 	}
 
 	template <bool whiteToMove>
-	constexpr inline bitboard getKnights() {
+	constexpr inline bitboard getKnights() const {
 		if constexpr (whiteToMove) {
 			return this->whiteKnights;
 		}
@@ -116,7 +115,7 @@ public:
 	}
 
 	template <bool whiteToMove>
-	constexpr inline bitboard getBishops() {
+	constexpr inline bitboard getBishops() const {
 		if constexpr (whiteToMove) {
 			return this->whiteBishops;
 		}
@@ -126,7 +125,7 @@ public:
 	}
 
 	template <bool whiteToMove>
-	constexpr inline bitboard getRooks() {
+	constexpr inline bitboard getRooks() const {
 		if constexpr (whiteToMove) {
 			return this->whiteRooks;
 		}
@@ -136,7 +135,7 @@ public:
 	}
 
 	template <bool whiteToMove>
-	constexpr inline bitboard getQueens() {
+	constexpr inline bitboard getQueens() const {
 		if constexpr (whiteToMove) {
 			return this->whiteQueens;
 		}
@@ -146,7 +145,7 @@ public:
 	}
 
 	template <bool whiteToMove>
-	constexpr inline Index getKing() {
+	constexpr inline Index getKing() const {
 		if constexpr (whiteToMove) {
 			return this->whiteKing;
 		}
@@ -156,7 +155,7 @@ public:
 	}
 
 	template <bool whiteToMove>
-	constexpr inline bitboard getAllPieces() {
+	constexpr inline bitboard getAllPieces() const {
 		if constexpr (whiteToMove) {
 			return this->whitePawns | this->whiteKnights | this->whiteBishops | this->whiteRooks | this->whiteQueens | Constants::SQUARE_BBS[this->whiteKing];
 		}
@@ -165,12 +164,22 @@ public:
 		}
 	}
 
-	constexpr inline bitboard getAllPieces() {
+	constexpr inline bitboard getAllPieces() const {
 		return this->getAllPieces<true>() | this->getAllPieces<false>();
 	}
 
-	constexpr inline bitboard getFreeSquares() {
+	template <bool whiteToMove>
+	constexpr inline bitboard getEnemyPieces() const {
+		return this->getAllPieces<!whiteToMove>();
+	}
+
+	constexpr inline bitboard getFreeSquares() const {
 		return ~this->getAllPieces();
+	}
+
+	template <bool whiteToMove>
+	constexpr inline bitboard notFriendlyPieces() const {
+		return ~this->getAllPieces<whiteToMove>();
 	}
 
 	template <Piece piece, bool whiteToMove>
