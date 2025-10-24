@@ -51,7 +51,7 @@ public:
 
 	template <bool whiteToMove>
 	constexpr inline bitboard startingRooks() const {
-		return this->getLeftRookStartingPos<whiteToMove>() | this->getRightRookStartingPos<whiteToMove>();
+		return this->startingQueensideRook<whiteToMove>() | this->startingKingsideRook<whiteToMove>();
 	}
 
 	template <bool whiteToMove>
@@ -182,15 +182,16 @@ public:
 		return ~this->getAllPieces<whiteToMove>();
 	}
 
-	template <Piece piece, bool whiteToMove>
-	constexpr inline void setPiece(Index index) {
-		if constexpr (piece == Chess::KING) {
-			if constexpr (whiteToMove) this->whiteKing = index;
-			else this->blackKing = index;
-		}
-		else {
-			Chess::setBit(this->getPiece<piece, whiteToMove>(), index);
-		}
+	template <bool whiteToMove>
+	constexpr inline Piece getPieceAt(Index square) const {
+		bitboard squareBB = Constants::SQUARE_BBS[square];
+		if ((this->getPawns<whiteToMove>() & squareBB) != 0) return Chess::PAWN;
+		if ((this->getKnights<whiteToMove>() & squareBB) != 0) return Chess::KNIGHT;
+		if ((this->getBishops<whiteToMove>() & squareBB) != 0) return Chess::BISHOP;
+		if ((this->getRooks<whiteToMove>() & squareBB) != 0) return Chess::ROOK;
+		if ((this->getQueens<whiteToMove>() & squareBB) != 0) return Chess::QUEEN;
+		if (this->getKing<whiteToMove>() == square) return Chess::KING;
+		return -1;
 	}
 
 	template <bool whiteToMove>
@@ -251,6 +252,15 @@ public:
 		else {
 			return (this->castlingRights & blackCastleMask) != 0;
 		}
+	}
+
+	inline Index getEnPassantSquare() const {
+		return Chess::lsb(this->enPassant);
+	}
+
+	constexpr inline Index getEnPassantFile() const {
+		if (this->enPassant == 0) return Chess::FILE_SIZE;
+		return Chess::fileOf(Chess::lsb(this->enPassant));
 	}
 
 	template <bool whiteToMove, Piece piece, Flag flag = Chess::QUIET>
@@ -441,7 +451,7 @@ public:
 				this->blackBishops ^= change;
 			}
 		}
-		else if constexpr (piece == Chess::ROOKS) {
+		else if constexpr (piece == Chess::ROOK) {
 			if constexpr (whiteToMove) {
 				this->whiteRooks ^= change;
 			}
@@ -523,6 +533,11 @@ public:
 			case Chess::ROOK:
 			{
 				switch (move.flag) {
+					case Chess::QUIET:
+					{
+						this->makeMove<whiteToMove, Chess::ROOK, Chess::QUIET>(Constants::SQUARE_BBS[move.from], Constants::SQUARE_BBS[move.to]);
+						return;
+					}
 					case Chess::REMOVE_SHORT_CASTLING:
 					{
 						this->makeMove<whiteToMove, Chess::ROOK, Chess::REMOVE_SHORT_CASTLING>(Constants::SQUARE_BBS[move.from], Constants::SQUARE_BBS[move.to]);
@@ -558,6 +573,7 @@ public:
 						this->makeMove<whiteToMove, Chess::KING, Chess::LONG_CASTLING>(Constants::SQUARE_BBS[move.from], Constants::SQUARE_BBS[move.to]);
 						return;
 					}
+
 				}
 			}
 		}

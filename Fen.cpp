@@ -24,22 +24,22 @@ static Piece getPieceHelper(char c) {
 }
 
 namespace Fen {
-    Board handleFen(const std::string& fen, BoardInfo& state) {
-        Board board;
+    bool handleFen(const std::string& fen, BoardState& state) {
+        bool whiteToMove;
+
         std::vector<std::string> splittedFen;
         split(splittedFen, fen, ' ');
 
         if (splittedFen.size() != 6) throw std::invalid_argument("Fen::Fen - fen does not contains all variables - " + fen);
 
-        generatePieces(board, splittedFen[0]);
-        state.whiteMove = splittedFen[1] == "w";
-        generateCastlingRights(board, splittedFen[2]);
-		board.enPassant = splittedFen[3] == "-" ? -1 : Square::getIndex(splittedFen[3]);
+        generatePieces(state.board, splittedFen[0]);
+        whiteToMove = splittedFen[1] == "w";
+        generateCastlingRights(state.board, splittedFen[2]);
+        state.board.enPassant = splittedFen[3] == "-" ? -1 : Square::getIndex(splittedFen[3]);
         state.halfmoves = std::stoi(splittedFen[4]);
         state.fullmoves = std::stoi(splittedFen[5]);
 
-
-        return board;
+        return whiteToMove;
     }
 
     void generatePieces(Board& board, const std::string& fenPieces) {

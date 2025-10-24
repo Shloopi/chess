@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <bit>
 #include <iostream>
+#include "Constants.hpp"
 
 using bitboard = uint64_t;
 using File = int8_t;
@@ -11,7 +12,14 @@ using Rank = int8_t;
 using Index = int8_t;
 using Piece = uint8_t;
 using Flag = uint8_t;
-struct Move;
+
+struct Move {
+	Index from, to;
+	Piece piece;
+	Flag flag;
+	Move() : from(0), to(0), piece(0), flag(0) {}
+	Move(Index from, Index to, Piece piece, Flag flag) : from(from), to(to), piece(piece), flag(flag) {}
+};
 
 namespace Chess {
 	constexpr uint64_t BOARD_SIZE = 64;
@@ -224,14 +232,6 @@ namespace Chess {
 
 	constexpr Move NULL_MOVE;
 }; 
-
-struct Move {
-	Index from, to;
-	Piece piece;
-	Flag flag;
-	Move() : from(0), to(0), piece(0), flag(0) {}
-	Move(Index from, Index to, Piece piece, Flag flag) : from(from), to(to), piece(piece), flag(flag) {}
-};
 
 struct Square {
 	constexpr static File NULL_FILE = -1;

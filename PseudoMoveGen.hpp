@@ -1,5 +1,5 @@
-#ifndef MOVE_GEN_HPP
-#define MOVE_GEN_HPP
+#ifndef PSEUDO_MOVE_GEN_HPP
+#define PSEUDO_MOVE_GEN_HPP
 
 #include <array>
 #include <vector>
@@ -7,20 +7,8 @@
 #include "Board.hpp"
 #include "BoardState.hpp"
 
-namespace Directions {
-	constexpr inline std::array<Square, 4> bishopDirections = { Square(1, 1), Square(1, -1), Square(-1, 1), Square(-1, -1) };
-	constexpr inline std::array<Square, 4> rookDirections = { Square(1, 0), Square(-1, 0), Square(0, 1), Square(0, -1) };
-}
-namespace MagicGen {
-	inline std::array<std::vector<bitboard>, Chess::BOARD_SIZE> bishopMagicTable;
-	inline std::array<std::vector<bitboard>, Chess::BOARD_SIZE> rookMagicTable;
 
-	inline uint64_t genMagicIndex(bitboard bb, bitboard magicNumber, Index shifter) { return (bb * magicNumber) >> shifter; }
-	void genOccupancies(std::vector<bitboard>& occupancies, bitboard moves);
-	bitboard genSlidingAttack(bool forBishop, Square sourceSquare, bitboard occupancy);
-	void genMagicTable(bool forBishop);
-}
-namespace MoveGen {
+namespace PseudoMoveGen {
 	inline void init() {
 		MagicGen::genMagicTable(true);
 		MagicGen::genMagicTable(false);
@@ -39,7 +27,7 @@ namespace MoveGen {
 
 	template <bool whiteToMove>
 	void genBitboardsLegalPawnMoves(const BoardState& state, bitboard pawns, bitboard& singlePushes, bitboard& doublePushes, bitboard& leftCaptures, bitboard& rightCaptures);
-	
+
 	template <bool whiteToMove, Piece piece>
 	bitboard genLegalMoves(const BoardState& state, Index square);
 

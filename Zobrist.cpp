@@ -37,11 +37,10 @@ namespace Zobrist {
         return key;
     }
 
-    bitboard Zobrist::applyBoardInfo(bitboard key, const BoardInfo& info) {
+    bitboard Zobrist::applyBoard(bitboard key, const Board& board) {
         // apply castling rights.
-        // Pack them into an index.
-        key ^= Zobrist::castlingRandom[(info.whiteLeftCastle << 3) | (info.whiteRightCastle << 2) | (info.blackLeftCastle << 1) | (info.blackRightCastle << 0)];
-        key ^= Zobrist::enPassantFileRandom[info.enPassantTarget < Chess::FILE_SIZE ? info.enPassantTarget / Chess::FILE_SIZE : Chess::FILE_SIZE];
+        key ^= Zobrist::castlingRandom[board.castlingRights];
+        key ^= Zobrist::enPassantFileRandom[board.getEnPassantFile()];
         return key;
     }
 

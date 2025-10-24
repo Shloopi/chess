@@ -219,7 +219,7 @@ namespace MoveGen {
     }
 
 	template <bool whiteToMove>
-    bitboard genLegalKingMoves(const BoardState state, Index square) {
+    bitboard genLegalKingMoves(const BoardState& state, Index square) {
         bitboard pieces = state.board.getAllPieces();
         bitboard noKingPieces = pieces & ~Constants::SQUARE_BBS[square];
         bitboard moveBitboard = MoveGen::getPseudoKingMoves<whiteToMove>(state.board, square);
@@ -250,52 +250,51 @@ namespace MoveGen {
         return moveBitboard;
     }
 
-    template <Piece T>
-    bitboard genLegalMoves(const Board& board, Index square) {
+    template <bool whiteToMove, Piece piece>
+    bitboard genLegalMoves(const BoardState& state, Index square) {
         bitboard movesBitboard = 0ULL;
 
         // if there are 2 checks, only king moves are legal.
-        if constexpr (T != Piece::KING) {
-            if (board.numOfChecks() > 1) {
+        if constexpr (piece != Chess::KING) {
+            if (state.numOfChecks() > 1) {
                 return 0ULL;
             }
         }
 
-        if constexpr (T == Piece::NONE) return 0ULL;
-        if constexpr (T == Piece::PAWN) return genBitboardLegalPawnMoves(board, Constants::SQUARE_BBS[square]);
-        if constexpr (T == Piece::QUEEN) movesBitboard = MoveGen::getPseudoQueenMoves(board, square, board.getAllPieces());
-        if constexpr (T == Piece::KING) return MoveGen::genLegalKingMoves(board, square);
-        if constexpr (T == Piece::KNIGHT) {
+        if constexpr (piece == Chess::PAWN) return MoveGen::genBitboardLegalPawnMoves<whiteToMove>(state, Constants::SQUARE_BBS[square]);
+        if constexpr (piece == Chess::QUEEN) movesBitboard = MoveGen::getPseudoQueenMoves<whiteToMove>(state.board, square, state.board.getAllPieces());
+        if constexpr (piece == Chess::KING) return MoveGen::genLegalKingMoves<whiteToMove>(state, square);
+        if constexpr (piece == Chess::KNIGHT) {
             // a pinned knight can't move.
-            if (board.isPiecePinned(square)) return 0ULL;
+            if (state.isPiecePinned(square)) return 0ULL;
 
-            movesBitboard = MoveGen::getPseudoKnightMoves(board, square);
+            movesBitboard = MoveGen::getPseudoKnightMoves<whiteToMove>(state.board, square);
         }
-        if constexpr (T == Piece::BISHOP) {
+        if constexpr (T == Chess::BISHOP) {
             // a bishop that is pinned by a rook ray, can't move.
-            if (board.isPinnedByRook(square)) return 0ULL;
+            if (state.isPinnedByRook(square)) return 0ULL;
 
-            movesBitboard = MoveGen::getPseudoBishopMoves(board, square, board.getAllPieces());
+            movesBitboard = MoveGen::getPseudoBishopMoves<whiteToMove>(state.board, square, state.board.getAllPieces());
         }
-        if constexpr (T == Piece::ROOK) {
+        if constexpr (T == Chess::ROOK) {
             // a rook that is pinned by a bishop ray, can't move.
-            if (board.isPinnedByBishop(square)) return 0ULL;
+            if (state.isPinnedByBishop(square)) return 0ULL;
 
-            movesBitboard = MoveGen::getPseudoRookMoves(board, square, board.getAllPieces());
+            movesBitboard = MoveGen::getPseudoRookMoves<whiteToMove>(state.board, square, state.board.getAllPieces());
         }
 
         // reduce moves because of check.
-        movesBitboard = MoveGen::movesLegalityWhileChecked(board, square, movesBitboard);
+        movesBitboard = MoveGen::movesLegalityWhileChecked<whiteToMove>(state, square, movesBitboard);
 
         // check pins and reduce moves.
-        movesBitboard = MoveGen::reducePinnedPiecesMoves(board, square, movesBitboard);
+        movesBitboard = MoveGen::reducePinnedPiecesMoves<whiteToMove>(state, square, movesBitboard);
 
         return movesBitboard;
     }
-    template <Piece T>
+    template <bool whiteToMove, Piece piece>
     void insertMoves(const Board& board, Move* moves, unsigned short& moveCount, Index sourceSquare, bitboard moveBitboard) {
         Index square;
-        MoveType moveType;
+        Flag flag;
         const bitboard enemyPieces = board.getEnemyPieces();
         Move* out = moves + moveCount;
 
@@ -303,44 +302,48 @@ namespace MoveGen {
             // get index of least-significant bit and remove the bit. 
             square = Chess::popLSB(moveBitboard);
 
-            moveType = MoveGen::calcMoveType<T>(sourceSquare, square, enemyPieces);
+            flag = MoveGen::calcFlag<whiteToMove, piece>(sourceSquare, square, enemyPieces);
 
-            if (moveType == MoveType::Capture) {
-                *out++ = Move(sourceSquare, square, T, moveType, board.getPieceOnSquare(square));
-            }
-            else {
-                *out++ = Move(sourceSquare, square, T, moveType);
-            }
+            *out++ = Move(sourceSquare, square, piece, flag);
         }
 
         moveCount = out - moves;
     }
-    template<Piece T>
-    MoveType calcMoveType(Index sourceSquare, Index targetSquare, const bitboard& enemyPieces) {
-        bitboard targetSquareBB = Constants::SQUARE_BBS[targetSquare];
+    template<bool whiteToMove, Piece piece>
+    Flag calcFlag(Index sourceSquare, Index targetSquare, const bitboard& enemyPieces) {
+        bitboard sourceSquareBB = Constants::SQUARE_BBS[sourceSquare];
 
-        if constexpr (T == Piece::KNIGHT || T == Piece::BISHOP ||
-            T == Piece::ROOK || T == Piece::QUEEN) {
-            return (enemyPieces & targetSquareBB) ? MoveType::Capture : MoveType::Quiet;
+        if constexpr (piece == Chess::KNIGHT || piece == Chess::BISHOP || piece == Chess::QUEEN) {
+            return Chess::QUIET;
         }
-        else if constexpr (T == Piece::KING) {
-            if (enemyPieces & targetSquareBB) return MoveType::Capture;
-            else if ((targetSquare - sourceSquare) == 2) return MoveType::KingCastle;
-            else if ((sourceSquare - targetSquare) == 2) return MoveType::QueenCastle;
-            else return MoveType::Quiet;
+        else if constexpr (piece == Chess::ROOK) {
+            if ((Board::startingKingsideRook<whiteToMove>() & sourceSquareBB) != 0) {
+                return Chess::REMOVE_SHORT_CASTLING;
+            }
+            else if ((Board::startingQueensideRook<whiteToMove>() & sourceSquareBB) != 0) {
+                return Chess::REMOVE_LONG_CASTLING;
+            }
+            else {
+                return Chess::QUIET;
+            }
+        }
+        else if constexpr (piece == Chess::KING) {
+            if ((targetSquare - sourceSquare) == 2) return Chess::SHORT_CASTLING;
+            else if ((sourceSquare - targetSquare) == 2) return Chess::LONG_CASTLING;
+            else return Chess::REMOVE_ALL_CASTLING;
         }
         else {
-            return MoveType::Quiet;
+            return Chess::QUIET;
         }
     }
-    void MoveGen::insertPawnMoves(const Board& board, Move* moves, unsigned short& moveCount, bitboard moveBitboard, short StartSquareDelta, MoveType moveType) {
-        MoveType tempMoveType;
-        Piece capturedPiece;
+
+	template <bool whiteToMove>
+    void insertPawnMoves(const Board& board, Move* moves, unsigned short& moveCount, bitboard moveBitboard, short StartSquareDelta, Flag flag) {
         Index square, sourceSquare;
 
-        bitboard promoMoves = moveBitboard & (Chess::RANK0 | Chess::RANK8);
+        bitboard promoMoves = moveBitboard & Chess::promotionRank<whiteToMove>();
         bitboard quietMoves = moveBitboard ^ promoMoves;
-        Index enPassant = board.getEnPassantTarget();
+        Index enPassant = board.getEnPassantSquare();
 
         Move* out = moves + moveCount;
 
@@ -350,13 +353,10 @@ namespace MoveGen {
             sourceSquare = square - StartSquareDelta;
 
             if (square == enPassant) {
-                *out++ = Move(sourceSquare, square, Piece::PAWN, MoveType::EnPassant, Piece::PAWN);
-            }
-            else if (moveType == MoveType::Capture) {
-                *out++ = Move(sourceSquare, square, Piece::PAWN, moveType, board.getPieceOnSquare(square));
+                *out++ = Move(sourceSquare, square, Chess::PAWN, Chess::EN_PASSANT);
             }
             else {
-                *out++ = Move(sourceSquare, square, Piece::PAWN, moveType);
+                *out++ = Move(sourceSquare, square, Chess::PAWN, flag);
             }
         }
 
@@ -365,80 +365,77 @@ namespace MoveGen {
             square = Chess::popLSB(promoMoves);
             sourceSquare = square - StartSquareDelta;
 
-            if (moveType == MoveType::Capture) {
-                tempMoveType = MoveType::PromotionCapture;
-                capturedPiece = board.getPieceOnSquare(square);
-            }
-            else {
-                tempMoveType = MoveType::Promotion;
-                capturedPiece = Piece::NONE;
-            }
-
-            *out++ = Move(sourceSquare, square, Piece::PAWN, tempMoveType, capturedPiece, Piece::QUEEN);
-            *out++ = Move(sourceSquare, square, Piece::PAWN, tempMoveType, capturedPiece, Piece::ROOK);
-            *out++ = Move(sourceSquare, square, Piece::PAWN, tempMoveType, capturedPiece, Piece::BISHOP);
-            *out++ = Move(sourceSquare, square, Piece::PAWN, tempMoveType, capturedPiece, Piece::KNIGHT);
+            *out++ = Move(sourceSquare, square, Chess::PAWN, Chess::KNIGHT_PROMOTION);
+            *out++ = Move(sourceSquare, square, Chess::PAWN, Chess::BISHOP_PROMOTION);
+            *out++ = Move(sourceSquare, square, Chess::PAWN, Chess::ROOK_PROMOTION);
+            *out++ = Move(sourceSquare, square, Chess::PAWN, Chess::QUEEN_PROMOTION);
         }
 
         moveCount = out - moves;
     }
-    void MoveGen::genLegalPawnMoves(const Board& board, bitboard pawns, Move* moves, unsigned short& moveCount) {
+
+    template <bool whiteToMove>
+    void genLegalPawnMoves(const Board& board, bitboard pawns, Move* moves, unsigned short& moveCount) {
         if (pawns != 0ULL) {
             // get bitboard moves.
             bitboard singlePushes, doublePushes, leftCaptures, rightCaptures;
-            MoveGen::genBitboardsLegalPawnMoves(board, pawns, singlePushes, doublePushes, leftCaptures, rightCaptures);
-            MoveGen::insertPawnMoves(board, moves, moveCount, singlePushes, board.whiteToMove() ? 8 : -8, MoveType::Quiet);
-            MoveGen::insertPawnMoves(board, moves, moveCount, doublePushes, board.whiteToMove() ? 16 : -16, MoveType::DoublePawnPush);
-            MoveGen::insertPawnMoves(board, moves, moveCount, leftCaptures, board.whiteToMove() ? 7 : -9, MoveType::Capture);
-            MoveGen::insertPawnMoves(board, moves, moveCount, rightCaptures, board.whiteToMove() ? 9 : -7, MoveType::Capture);
+            MoveGen::genBitboardsLegalPawnMoves<whiteToMove>(board, pawns, singlePushes, doublePushes, leftCaptures, rightCaptures);
+            MoveGen::insertPawnMoves<whiteToMove>(board, moves, moveCount, singlePushes, whiteToMove ? 8 : -8, MoveType::Quiet);
+            MoveGen::insertPawnMoves<whiteToMove>(board, moves, moveCount, doublePushes, whiteToMove ? 16 : -16, MoveType::DoublePawnPush);
+            MoveGen::insertPawnMoves<whiteToMove>(board, moves, moveCount, leftCaptures, whiteToMove ? 7 : -9, MoveType::Capture);
+            MoveGen::insertPawnMoves<whiteToMove>(board, moves, moveCount, rightCaptures, whiteToMove ? 9 : -7, MoveType::Capture);
         }
     }
-    void MoveGen::genLegalHumanMoves(const Board& board, Index square, Move* moves, unsigned short& moveCount) {
-        Piece type = board.getPieceOnSquare(square);
+
+    template <bool whiteToMove>
+    void genLegalHumanMoves(const BoardState& state, Index square, Move* moves, unsigned short& moveCount) {
+        Piece type = board.getPieceAt(square);
         bitboard movesBitboard;
 
-        if (type == Piece::PAWN) {
-            MoveGen::genLegalPawnMoves(board, (1ULL << square), moves, moveCount);
+        if (type == Chess::PAWN) {
+            MoveGen::genLegalPawnMoves(state.board, (1ULL << square), moves, moveCount);
         }
         else {
-            if (type == Piece::KNIGHT) {
-                movesBitboard = MoveGen::genLegalMoves<Piece::KNIGHT>(board, square);
-                MoveGen::insertMoves<Piece::KNIGHT>(board, moves, moveCount, square, movesBitboard);
+            if (type == Chess::KNIGHT) {
+                movesBitboard = MoveGen::genLegalMoves<whiteToMove, Chess::KNIGHT>(state, square);
+                MoveGen::insertMoves<whiteToMove, Chess::KNIGHT>(state.board, moves, moveCount, square, movesBitboard);
             }
-            if (type == Piece::BISHOP) {
-                movesBitboard = MoveGen::genLegalMoves<Piece::BISHOP>(board, square);
-                MoveGen::insertMoves<Piece::BISHOP>(board, moves, moveCount, square, movesBitboard);
+            if (type == Chess::BISHOP) {
+                movesBitboard = MoveGen::genLegalMoves<whiteToMove, Chess::BISHOP>(state, square);
+                MoveGen::insertMoves<whiteToMove, Chess::BISHOP>(state.board, moves, moveCount, square, movesBitboard);
             }
-            if (type == Piece::ROOK) {
-                movesBitboard = MoveGen::genLegalMoves<Piece::ROOK>(board, square);
-                MoveGen::insertMoves<Piece::ROOK>(board, moves, moveCount, square, movesBitboard);
+            if (type == Chess::ROOK) {
+                movesBitboard = MoveGen::genLegalMoves<whiteToMove, Chess::ROOK>(state, square);
+                MoveGen::insertMoves<whiteToMove, Chess::ROOK>(state.board, moves, moveCount, square, movesBitboard);
             }
-            if (type == Piece::QUEEN) {
-                movesBitboard = MoveGen::genLegalMoves<Piece::QUEEN>(board, square);
-                MoveGen::insertMoves<Piece::QUEEN>(board, moves, moveCount, square, movesBitboard);
+            if (type == Chess::QUEEN) {
+                movesBitboard = MoveGen::genLegalMoves<whiteToMove, Chess::QUEEN>(state, square);
+                MoveGen::insertMoves<whiteToMove, Chess::QUEEN>(state.board, moves, moveCount, square, movesBitboard);
             }
-            if (type == Piece::KING) {
-                movesBitboard = MoveGen::genLegalMoves<Piece::KING>(board, square);
-                MoveGen::insertMoves<Piece::KING>(board, moves, moveCount, square, movesBitboard);
+            if (type == Chess::KING) {
+                movesBitboard = MoveGen::genLegalMoves<whiteToMove, Chess::KING>(state, square);
+                MoveGen::insertMoves<whiteToMove, Chess::KING>(state.board, moves, moveCount, square, movesBitboard);
             }
         }
     }
-    unsigned short MoveGen::genAllLegalMoves(const Board& board, Move* moves) {
+
+	template <bool whiteToMove>
+    unsigned short genAllLegalMoves(const BoardState& state, Move* moves) {
         unsigned short moveCount = 0;
 
-        if (board.numOfChecks() > 1) {
-            MoveGen::genLegalHumanMoves(board, board.getKingPos(), moves, moveCount);
+        if (state.numOfChecks() > 1) {
+            MoveGen::genLegalHumanMoves<whiteToMove>(state, state.board.getKing(), moves, moveCount);
             return moveCount;
         }
 
         // get all pawns.
-        bitboard pawns = board.getPieces(Piece::PAWN, board.whiteToMove());
+        bitboard pawns = state.board.getPawns<whiteToMove>();
 
         // insert pawn moves.
-        MoveGen::genLegalPawnMoves(board, pawns, moves, moveCount);
+        MoveGen::genLegalPawnMoves<whiteToMove>(state.board, pawns, moves, moveCount);
 
         // get all other pieces.
-        bitboard nonPawnPieces = board.getFriendlyPieces() & ~pawns;
+        bitboard nonPawnPieces = state.board.getAllPieces<whiteToMove>() & ~pawns;
 
         Index square;
 
@@ -446,23 +443,25 @@ namespace MoveGen {
         while (nonPawnPieces != 0) {
             square = Chess::popLSB(nonPawnPieces);
 
-            MoveGen::genLegalHumanMoves(board, square, moves, moveCount);
+            MoveGen::genLegalHumanMoves<whiteToMove>(state, square, moves, moveCount);
         }
 
         return moveCount;
     }
-    bool hasLegalMoves(const Board& board) {
-        if (board.numOfChecks() > 1) return MoveGen::genLegalKingMoves(board, board.getKingPos()) != 0;
+
+    template <bool whiteToMove>
+    bool hasLegalMoves(const BoardState& state) {
+        if (state.numOfChecks() > 1) return MoveGen::genLegalKingMoves<whiteToMove>(state, state.board.getKing()) != 0;
 
         // get all pawns.
-        bitboard pawns = board.getPieces(Piece::PAWN, board.whiteToMove());
+        bitboard pawns = state.board.getPawns<whiteToMove>();
 
         // insert pawn moves.
-        bitboard moves = MoveGen::genBitboardLegalPawnMoves(board, pawns);
+        bitboard moves = MoveGen::genBitboardLegalPawnMoves<whiteToMove>(state, pawns);
         if (moves != 0) return true;
 
         // get all other pieces.
-        bitboard nonPawnPieces = board.getFriendlyPieces() & ~pawns;
+        bitboard nonPawnPieces = state.board.getAllPieces<whiteToMove>() & ~pawns;
 
         Index square;
         Piece piece;
@@ -471,13 +470,13 @@ namespace MoveGen {
         while (nonPawnPieces != 0) {
             square = Chess::popLSB(nonPawnPieces);
             
-            piece = board.getPieceOnSquare(square);
+            piece = state.board.getPieceAt(square);
 
-            if (piece == Piece::KNIGHT) moves = MoveGen::genLegalMoves<Piece::KNIGHT>(board, square);
-            else if (piece == Piece::BISHOP) moves = MoveGen::genLegalMoves<Piece::BISHOP>(board, square);
-            else if (piece == Piece::ROOK) moves = MoveGen::genLegalMoves<Piece::ROOK>(board, square);
-            else if (piece == Piece::QUEEN) moves = MoveGen::genLegalMoves<Piece::QUEEN>(board, square);
-            else if (piece == Piece::KING) moves = MoveGen::genLegalMoves<Piece::KING>(board, square);
+            if (piece == Chess::KNIGHT) moves = MoveGen::genLegalMoves<whiteToMove, Chess::KNIGHT>(state, square);
+            else if (piece == Chess::BISHOP) moves = MoveGen::genLegalMoves<whiteToMove, Chess::BISHOP>(state, square);
+            else if (piece == Chess::ROOK) moves = MoveGen::genLegalMoves<whiteToMove, Chess::ROOK>(state, square);
+            else if (piece == Chess::QUEEN) moves = MoveGen::genLegalMoves<whiteToMove, Chess::QUEEN>(state, square);
+            else if (piece == Chess::KING) moves = MoveGen::genLegalMoves<whiteToMove, Chess::KING>(state, square);
             if (moves != 0) return true;
 
         }

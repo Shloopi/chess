@@ -13,6 +13,7 @@ private:
 	template <bool whiteToMove>
 	void calcChecks() {
 		Index kingSquare = this->board.getKing<whiteToMove>();
+		bitboard allPieces = this->board.getAllPieces();
 
 		this->checkingPieces = 0ULL;
 
@@ -20,13 +21,13 @@ private:
 		this->checkingPieces |= Constants::KNIGHT_MOVES[kingSquare] & this->board.getKnights<!whiteToMove>();
 
 		// bishop checks.
-		this->checkingPieces |= MoveGen::getPseudoBishopMoves<whiteToMove>(board, kingSquare, this->allPieces) & this->board.getBishops<!whiteToMove>();
+		this->checkingPieces |= MoveGen::getPseudoBishopMoves<whiteToMove>(board, kingSquare, allPieces) & this->board.getBishops<!whiteToMove>();
 
 		// rook checks.
-		this->checkingPieces |= MoveGen::getPseudoRookMoves<whiteToMove>(board, kingSquare, this->allPieces) & this->board.getRooks<!whiteToMove>();
+		this->checkingPieces |= MoveGen::getPseudoRookMoves<whiteToMove>(board, kingSquare, allPieces) & this->board.getRooks<!whiteToMove>();
 
 		// queen checks.
-		this->checkingPieces |= MoveGen::getPseudoQueenMoves<whiteToMove>(board, kingSquare, this->allPieces) & this->board.getQueens<!whiteToMove>();
+		this->checkingPieces |= MoveGen::getPseudoQueenMoves<whiteToMove>(board, kingSquare, allPieces) & this->board.getQueens<!whiteToMove>();
 
 		// pawn checks.
 		this->checkingPieces |= MoveGen::getPawnCaptures<whiteToMove>(this->board.getPawns<!whiteToMove>()) & Constants::SQUARE_BBS[kingSquare];
@@ -44,20 +45,20 @@ private:
 		bitboard rookMoves = MoveGen::getPseudoRookMoves<whiteToMove>(this->board, kingSquare, allPieces);
 		bitboard queenMoves = MoveGen::getPseudoQueenMoves<whiteToMove>(this->board, kingSquare, allPieces);
 
-		bitboard bishops = this->pieces[this->info.whiteMove ? ColoredPiece::BLACK_BISHOP : ColoredPiece::WHITE_BISHOP];
-		bitboard rooks = this->pieces[this->info.whiteMove ? ColoredPiece::WHITE_ROOK : ColoredPiece::BLACK_ROOK];
-		bitboard queens = this->pieces[this->info.whiteMove ? ColoredPiece::WHITE_QUEEN : ColoredPiece::BLACK_QUEEN];
+		bitboard bishops = this->board.getBishops<!whiteToMove>();
+		bitboard rooks = this->board.getRooks<!whiteToMove>();
+		bitboard queens = this->board.getQueens<!whiteToMove>();
 
 		// calculate the potential pieces that can pin pieces (treating queens as being both rooks and bishops).
 		bitboard possiblePinningBishops = Constants::BISHOP_ATTACKS[kingSquare] & (bishops | queens) & ~this->info.checkingPieces;
 		bitboard possiblePinningRooks = Constants::ROOK_ATTACKS[kingSquare] & (rooks | queens) & ~this->info.checkingPieces;
 
 		// check pins for each type (bishops, rooks, queens).
-		this->info.bishopPins = processPins<true>(possiblePinningBishops, bishopMoves);
-		this->info.rookPins = processPins<false>(possiblePinningRooks, rookMoves);
+		this->info.bishopPins = this->processPins<whiteToMove, true>(possiblePinningBishops, bishopMoves);
+		this->info.rookPins = this->processPins<whiteToMove, false>(possiblePinningRooks, rookMoves);
 	}
 
-	template<bool forBishopPins>
+	template<bool whiteToMove, bool forBishopPins>
 	bitboard processPins(bitboard possiblePinningPieces, bitboard kingRayMoves) const {
 		Index square;
 		bitboard pinningPieceMoves, pins = 0ULL;
@@ -69,9 +70,9 @@ private:
 
 			// get the pseudo moves of that piece.
 			if constexpr (forBishopPins)
-				pinningPieceMoves = MoveGen::getPseudoBishopMoves<whiteToMove>(this->board, square, this->allPieces);
+				pinningPieceMoves = MoveGen::getPseudoBishopMoves<whiteToMove>(this->board, square, this->board.getAllPieces());
 			else
-				pinningPieceMoves = MoveGen::getPseudoRookMoves<whiteToMove>(this->board, square, this->allPieces);
+				pinningPieceMoves = MoveGen::getPseudoRookMoves<whiteToMove>(this->board, square, this->board.getAllPieces());
 
 			// if the moves of the piece and the moves from the king overlapps, there is a pinned piece in between.
 			pins |= (kingRayMoves & pinningPieceMoves);
@@ -122,6 +123,14 @@ public:
 
 	inline bool isPiecePinned(Index square) const {
 		return ((Constants::SQUARE_BBS[square] & (this->rookPins | this->bishopPins)) != 0ULL);
+	}
+
+	inline bool isPinnedByBishop(Index square) const {
+		return ((Constants::SQUARE_BBS[square] & this->bishopPins) != 0ULL);
+	}
+
+	inline bool isPinnedByRook(Index square) const {
+		return ((Constants::SQUARE_BBS[square] & this->rookPins) != 0ULL);
 	}
 
 	inline bitboard getPinnedPieces() const {

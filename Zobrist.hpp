@@ -2,7 +2,7 @@
 #define ZOBRIST_HPP
 
 #include <random>
-#include "BoardInfo.hpp"
+#include "BoardState.hpp"
 #include "Chess.hpp"
 #include <array>
 
@@ -18,7 +18,7 @@ namespace Zobrist {
 
     bitboard applyPiece(bitboard key, bool whiteToMove, Piece piece, Index square);
     bitboard applyTurn(bitboard key, bool whiteToMove);
-    bitboard applyBoardInfo(bitboard key, const BoardInfo& info);
+    bitboard applyBoard(bitboard key, const Board& board);
 
 
     bitboard genRandomNumber();
