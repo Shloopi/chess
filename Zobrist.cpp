@@ -37,10 +37,10 @@ namespace Zobrist {
         return key;
     }
 
-    bitboard Zobrist::applyBoard(bitboard key, const Board& board) {
+    bitboard Zobrist::applyBoard(bitboard key, uint8_t castlingRights, Index enPassantFile) {
         // apply castling rights.
-        key ^= Zobrist::castlingRandom[board.castlingRights];
-        key ^= Zobrist::enPassantFileRandom[board.getEnPassantFile()];
+        key ^= Zobrist::castlingRandom[castlingRights];
+        key ^= Zobrist::enPassantFileRandom[enPassantFile];
         return key;
     }
 

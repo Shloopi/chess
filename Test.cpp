@@ -1,15 +1,19 @@
 #include "Test.hpp"
 #include <chrono>
 #include "MoveGen.hpp"
-#include "Board.hpp"
+#include "BoardState.hpp"
 
-uint64_t test::timeDepth(Board& board, unsigned char depth)
+template uint64_t test::timeDepth<true>(BoardState&, uint8_t);
+template uint64_t test::timeDepth<false>(BoardState&, uint8_t);
+
+template <bool whiteToMove>
+uint64_t test::timeDepth(BoardState& state, uint8_t depth)
 {
     bitboard moves_count;
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    moves_count = test::countMoves(board, depth);
+    moves_count = test::countMoves<whiteToMove>(state, depth);
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = end - start;
@@ -18,9 +22,13 @@ uint64_t test::timeDepth(Board& board, unsigned char depth)
     return moves_count;
 }
 
-uint64_t test::countMoves(Board& board, unsigned char depth) {
+template uint64_t test::countMoves<true>(BoardState&, uint8_t);
+template uint64_t test::countMoves<false>(BoardState&, uint8_t);
+
+template <bool whiteToMove>
+uint64_t test::countMoves(BoardState& state, uint8_t depth) {
     std::array<Move, 218> moves;
-    unsigned short moveCount = MoveGen::genAllLegalMoves(board, &moves[0]);
+    unsigned short moveCount = MoveGen::genAllLegalMoves<whiteToMove>(state, &moves[0]);
 
     if (depth == 1) return moveCount;
 
@@ -30,12 +38,17 @@ uint64_t test::countMoves(Board& board, unsigned char depth) {
 
         const Move move = moves[i];
 
-        board.makeMove(move);
+        state.board.makeMove<whiteToMove>(move);
 
-        //if (!board.gameOver())
-            count += test::countMoves(board, depth - 1);
+        if constexpr (whiteToMove) {
+            count += test::countMoves<false>(state, depth - 1);
+        }
+        else {
+            count += test::countMoves<true>(state, depth - 1);
 
-        board.unmakeMove();
+        }
+
+        // TODO: unmake move.
 
     }
 

@@ -5,6 +5,8 @@
 #include <bit>
 #include <iostream>
 #include "Constants.hpp"
+#include <string_view>
+#include <string_view>
 
 using bitboard = uint64_t;
 using File = int8_t;
@@ -13,13 +15,7 @@ using Index = int8_t;
 using Piece = uint8_t;
 using Flag = uint8_t;
 
-struct Move {
-	Index from, to;
-	Piece piece;
-	Flag flag;
-	Move() : from(0), to(0), piece(0), flag(0) {}
-	Move(Index from, Index to, Piece piece, Flag flag) : from(from), to(to), piece(piece), flag(flag) {}
-};
+
 
 namespace Chess {
 	constexpr uint64_t BOARD_SIZE = 64;
@@ -33,6 +29,25 @@ namespace Chess {
 	constexpr Piece ROOK = 3;
 	constexpr Piece QUEEN = 4;
 	constexpr Piece KING = 5;
+
+	static std::string getPiece(Piece piece) {
+		if (piece == PAWN) return "PAWN";
+		if (piece == KNIGHT) return "KNIGHT";
+		if (piece == BISHOP) return "BISHOP";
+		if (piece == ROOK) return "ROOK";
+		if (piece == QUEEN) return "QUEEN";
+		if (piece == KING) return "KING";
+	}
+
+	template <bool whiteToMove>
+	static char getPiece(Piece piece) {
+		if (piece == PAWN) return whiteToMove ? 'P' : 'p';
+		if (piece == KNIGHT) return whiteToMove ? 'N' : 'n';
+		if (piece == BISHOP) return whiteToMove ? 'B' : 'b';
+		if (piece == ROOK) return whiteToMove ? 'R' : 'r';
+		if (piece == QUEEN) return whiteToMove ? 'Q' : 'q';
+		if (piece == KING) return whiteToMove ? 'K' : 'k';
+	}
 
 	// ------------- Flags -------------
 	constexpr Flag QUIET = 0;
@@ -98,9 +113,9 @@ namespace Chess {
 		if constexpr (whiteToMove) return RANK8;
 		else return RANK1;
 	}
-	
+
 	// ------------- Bit Operations -------------
-	inline void printBitboard(bitboard bitboard, Index piece = -1ULL, std::string_view c = "1") {
+	inline void printBitboard(bitboard bitboard, Index piece = -1ULL, std::string c = "1") {
 		std::string toPrint = "";
 
 		for (int rank = Chess::RANK_SIZE - 1; rank >= 0; rank--) {
@@ -165,61 +180,61 @@ namespace Chess {
 
 	// ------------- Moves -------------
 	template<bool whiteToMove>
-	constexpr bitboard pawnForward(bitboard bb) {
+	inline constexpr bitboard pawnForward(bitboard bb) {
 		if constexpr (whiteToMove) return bb << 8;
 		else return bb >> 8;
 	}
 
 	template<bool whiteToMove>
-	constexpr bitboard pawnBackward(bitboard bb) {
+	inline constexpr bitboard pawnBackward(bitboard bb) {
 		if constexpr (whiteToMove) return bb >> 8;
 		else return bb << 8;
 	}
 
 	template<bool whiteToMove>
-	constexpr bitboard pawnForward2(bitboard bb) {
+	inline constexpr bitboard pawnForward2(bitboard bb) {
 		if constexpr (whiteToMove) return bb << 16;
 		else return bb >> 16;
 	}
 
 	template<bool whiteToMove>
-	constexpr bitboard pawnBackward2(bitboard bb) {
+	inline constexpr bitboard pawnBackward2(bitboard bb) {
 		if constexpr (whiteToMove) return bb >> 16;
 		else return bb << 16;
 	}
 
 	template<bool whiteToMove>
-	constexpr bitboard pawnAttackLeft(bitboard bb) {
+	inline constexpr bitboard pawnAttackLeft(bitboard bb) {
 		if constexpr (whiteToMove) return bb << 7;
 		else return bb >> 7;
 	}
 
 	template<bool whiteToMove>
-	constexpr bitboard pawnAttackRight(bitboard bb) {
+	inline constexpr bitboard pawnAttackRight(bitboard bb) {
 		if constexpr (whiteToMove) return bb << 9;
 		else return bb >> 9;
 	}
 
 	template<bool whiteToMove>
-	constexpr bitboard pawnLeftMask() {
+	inline constexpr bitboard pawnLeftMask() {
 		if constexpr (whiteToMove) return ~FILE_A;
 		else return ~FILE_H;
 	}
 
 	template<bool whiteToMove>
-	constexpr bitboard pawnRightMask() {
+	inline constexpr bitboard pawnRightMask() {
 		if constexpr (whiteToMove) return ~FILE_H;
 		else return ~FILE_A;
 	}
 
 	template<bool whiteToMove>
-	constexpr bitboard lastPawnRank() {
+	inline constexpr bitboard lastPawnRank() {
 		if constexpr (whiteToMove) return RANK7;
 		else return RANK2;
 	}
 
 	template<bool whiteToMove>
-	constexpr bitboard firstPawnRank() {
+	inline constexpr bitboard firstPawnRank() {
 		if constexpr (whiteToMove) return RANK2;
 		else return RANK7;
 	}
@@ -229,9 +244,7 @@ namespace Chess {
 		if constexpr (whiteToMove) return RANK1;
 		else return RANK8;
 	}
-
-	constexpr Move NULL_MOVE;
-}; 
+};
 
 struct Square {
 	constexpr static File NULL_FILE = -1;
@@ -243,8 +256,8 @@ struct Square {
 	Index index;
 
 	constexpr Square() : file(NULL_FILE), rank(NULL_RANK), index(NULL_INDEX) {}
-	constexpr Square(File file, Rank rank) : file(file), rank(rank), index(rank * Chess::RANK_SIZE + file) {}
-	Square(Index index) : file(index % Chess::RANK_SIZE), rank(index / Chess::RANK_SIZE), index(index) {}
+	constexpr Square(File file, Rank rank) : file(file), rank(rank), index(rank* Chess::RANK_SIZE + file) {}
+	Square(Index index) : file(index% Chess::RANK_SIZE), rank(index / Chess::RANK_SIZE), index(index) {}
 
 	inline bool isValid() const {
 		return this->file >= 0 && this->file < Chess::FILE_SIZE && this->rank >= 0 && this->rank < Chess::RANK_SIZE;
@@ -269,6 +282,21 @@ struct Square {
 
 		return std::string(1, 'a' + s.file) + std::string(1, '1' + s.rank);
 	}
+};
+
+struct Move {
+	Index from, to;
+	Piece piece;
+	Flag flag;
+	inline Move() : from(0), to(0), piece(0), flag(0) {}
+	inline Move(Index from, Index to, Piece piece, Flag flag) : from(from), to(to), piece(piece), flag(flag) {}
+	friend std::ostream& operator<<(std::ostream& os, const Move& m) {
+		os << "piece " << Chess::getPiece(m.piece) << " - from: " << Square::getNotation(m.from) << " to: " << Square::getNotation(m.to) << '\n';
+
+		return os;
+	}
+
+
 };
 
 enum class EndState : uint8_t {
