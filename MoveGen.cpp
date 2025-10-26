@@ -164,7 +164,6 @@ namespace MoveGen {
             // if the target square is attacked, remove it from the moves bitboard.
             if (state.isSquareAttacked<whiteToMove>(targetSquare, noKingPieces)) moveBitboard &= ~Constants::SQUARE_BBS[targetSquare];
         }
-        // TODO - i am here
         // check for kingside castling.
         targetCastlingSquare = square + 2;
 
@@ -418,8 +417,9 @@ namespace MoveGen {
 
         return false;
     }
+
     template<bool whiteToMove>
-    uint8_t genPawnMoves(const BoardState& state, Move* moves) {
+    void genPawnMoves(const BoardState& state, Move* moves, uint8_t& moveCount) {
 		bitboard pawns = state.board.getPawns<whiteToMove>();
 		bitboard enemy = state.board.getEnemyPieces<whiteToMove>() & state.board.enPassant;
 		bitboard empty = state.board.getFreeSquares();
@@ -438,9 +438,37 @@ namespace MoveGen {
         bitboard canRightCapture = pawns & Chess::pawnsRevAttackRight<whiteToMove>(enemy) & ~state.rookPins & Chess::pawnRightMask<whiteToMove>() & checkRay;
 
         // Remove PinnedPawns.
-        bitboard pinnedPushes = ((canSinglePush | canDoublePush) & state.rookPins);
-        while (((canSinglePush | canDoublePush) & state.rookPins) != 0) {
+        Index kingSquare = state.board.getKing<whiteToMove>(), pinnedPawn;
+        bitboard pinnedPawnBB, pinRay;
 
+        // Single and double pushes.
+        while (((canSinglePush | canDoublePush) & state.rookPins) != 0) {
+            pinnedPawn = Chess::lsb((canSinglePush | canDoublePush) & state.rookPins);
+            pinnedPawnBB = Constants::SQUARE_BBS[pinnedPawn];
+
+            pinRay = Constants::BETWEEN_PIECES_TABLE[kingSquare][pinnedPawn];
+
+            if ((pinRay & Chess::pawnForward<whiteToMove>(pinnedPawnBB))) {
+                canSinglePush &= ~pinnedPawnBB;
+            }
+            if ((pinRay & Chess::pawnForward2<whiteToMove>(pinnedPawnBB))) {
+                canDoublePush &= ~pinnedPawnBB;
+            }
+        }
+        
+        // Left and right captures.
+        while (((canSinglePush | canDoublePush) & state.bishopPins) != 0) {
+            pinnedPawn = Chess::lsb((canSinglePush | canDoublePush) & state.bishopPins);
+            pinnedPawnBB = Constants::SQUARE_BBS[pinnedPawn];
+
+            pinRay = Constants::BETWEEN_PIECES_TABLE[kingSquare][pinnedPawn];
+
+            if ((pinRay & Chess::pawnAttackLeft<whiteToMove>(pinnedPawnBB))) {
+                canLeftCapture &= ~pinnedPawnBB;
+            }
+            if ((pinRay & Chess::pawnAttackRight<whiteToMove>(pinnedPawnBB))) {
+                canRightCapture &= ~pinnedPawnBB;
+            }
         }
 
         // Handle En Passant.
@@ -460,39 +488,108 @@ namespace MoveGen {
 		canSinglePush ^= promoSinglePush;
 		canLeftCapture ^= promoLeftCapture;
 		canRightCapture ^= promoRightCapture;
-
-		
         
 		// ----- Insert Moves -----
 		Index startSquare, targetSquare;
-		Move* out = moves;
+		Move* out = moves + moveCount;
 
 		// Insert Single Pushes.
         while (canSinglePush != 0) {
             startSquare = Chess::popLSB(canSinglePush);
 			targetSquare = Chess::pawnForward<whiteToMove>(startSquare);
-			**out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::QUIET);
+			*out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::QUIET);
 		}
 
         // Insert Double Pushes.
         while (canDoublePush != 0) {
             startSquare = Chess::popLSB(canDoublePush);
             targetSquare = Chess::pawnForward2<whiteToMove>(startSquare);
-            **out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::DOUBLE_PAWN_PUSH);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::DOUBLE_PAWN_PUSH);
         }
 
         // Insert Left Captures.
         while (canLeftCapture != 0) {
             startSquare = Chess::popLSB(canLeftCapture);
             targetSquare = Chess::pawnAttackLeft<whiteToMove>(startSquare);
-            **out++ = Move(startSquare, targetSquare, Chess::PAWN, targetSquare == enPassant ? Chess::EN_PASSANT : Chess::QUIET);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, targetSquare == enPassant ? Chess::EN_PASSANT : Chess::QUIET);
         }
 
-        // Insert Left Captures.
+        // Insert Right Captures.
         while (canRightCapture != 0) {
             startSquare = Chess::popLSB(canRightCapture);
             targetSquare = Chess::pawnAttackRight<whiteToMove>(startSquare);
-            **out++ = Move(startSquare, targetSquare, Chess::PAWN, targetSquare == enPassant ? Chess::EN_PASSANT : Chess::QUIET);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, targetSquare == enPassant ? Chess::EN_PASSANT : Chess::QUIET);
         }
+
+        // Insert Single Pushe Promotions.
+        while (promoSinglePush != 0) {
+            startSquare = Chess::popLSB(promoSinglePush);
+            targetSquare = Chess::pawnForward<whiteToMove>(startSquare);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::KNIGHT_PROMOTION);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::BISHOP_PROMOTION);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::ROOK_PROMOTION);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::QUEEN_PROMOTION);
+
+        }
+
+        // Insert Left Capture Promotions.
+        while (promoLeftCapture != 0) {
+            startSquare = Chess::popLSB(promoLeftCapture);
+            targetSquare = Chess::pawnAttackLeft<whiteToMove>(startSquare);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::KNIGHT_PROMOTION);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::BISHOP_PROMOTION);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::ROOK_PROMOTION);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::QUEEN_PROMOTION);
+        }
+
+        // Insert Right Capture Promotions.
+        while (promoRightCapture != 0) {
+            startSquare = Chess::popLSB(promoRightCapture);
+            targetSquare = Chess::pawnAttackRight<whiteToMove>(startSquare);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::KNIGHT_PROMOTION);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::BISHOP_PROMOTION);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::ROOK_PROMOTION);
+            *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::QUEEN_PROMOTION);
+        }
+
+        moveCount = out - moves;
+    }
+
+    template<bool whiteToMove>
+    void genKingMoves(const BoardState& state, Move* moves, uint8_t& moveCount) {
+        Index kingSquare = state.board.getKing<whiteToMove>();
+        bitboard pieces = state.board.getAllPieces();
+        bitboard noKingPieces = pieces & ~Constants::SQUARE_BBS[kingSquare];
+        bitboard moveBitboard = PseudoMoveGen::getPseudoKingMoves(state.board.notFriendlyPieces<whiteToMove>(), kingSquare);
+        bitboard tempBitboard = moveBitboard;
+        Index targetSquare, targetCastlingSquare;
+
+        // Insertion.
+        Move* out = moves + moveCount;
+
+        // run for every move and check if the target square is attacked.
+        while (tempBitboard != 0) {
+            // get the index of the target square and remove it from the bitboard.
+            targetSquare = Chess::popLSB(tempBitboard);
+
+            // if the target square is attacked, remove it from the moves bitboard.
+            if (!state.isSquareAttacked<whiteToMove>(targetSquare, noKingPieces)) {
+                *out++ = Move(kingSquare, targetSquare, Chess::KING, Chess::REMOVE_ALL_CASTLING);
+            }
+        }
+
+        // check for kingside castling.
+        targetCastlingSquare = kingSquare + 2;
+        if (!state.inCheck() && state.board.canCastleShort<whiteToMove>() && (moveBitboard & (1ULL << (kingSquare + 1))) != 0 && (pieces & (1ULL << targetCastlingSquare)) == 0 && (pieces & (1ULL << (kingSquare + 1))) == 0 && !state.isSquareAttacked<whiteToMove>(targetCastlingSquare, state.board.getAllPieces())) {
+            *out++ = Move(kingSquare, targetCastlingSquare, Chess::KING, Chess::SHORT_CASTLING);
+        }
+
+        // check for queenside castling.
+        targetCastlingSquare = square - 2;
+        if (!state.inCheck() && state.board.canCastleLong<whiteToMove>() && (moveBitboard & (1ULL << (square - 1))) != 0 && (pieces & (1ULL << targetCastlingSquare)) == 0 && (pieces & (1ULL << (square - 1))) == 0 && !state.isSquareAttacked<whiteToMove>(targetCastlingSquare, state.board.getAllPieces())) {
+            *out++ = Move(kingSquare, targetCastlingSquare, Chess::KING, Chess::LONG_CASTLING);
+        }
+
+        moveCount = out - moves;
     }
 }
