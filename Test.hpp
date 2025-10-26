@@ -37,7 +37,7 @@ namespace test {
 
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = end - start;
-        std::cout << depth << ". " << moves_count << " Moves -" << "Function took " << elapsed.count() << " ms";
+        std::cout << static_cast<short>(depth) << ") " << moves_count << " Moves - Function took " << elapsed.count() << " ms";
         std::cout << " - " << (elapsed.count() / moves_count) << "ms Per Move." << '\n';
         return moves_count;
     }

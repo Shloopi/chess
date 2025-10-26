@@ -7,9 +7,35 @@
 #include <stack>
 #include "PseudoMoveGen.hpp"
 #include "Board.hpp"
+#include "MoveGen.hpp"
 
 class BoardState {
 private:
+	//template <bool whiteToMove>
+	//void checkState() {
+	//	// no possible moves.
+	//	if (MoveGen::hasLegalMoves<whiteToMove>(this)) {
+	//		if (this->inCheck()) {
+	//			this->endState = EndState::CHECKMATE;
+	//		}
+	//		else {
+	//			this->endState = EndState::STALEMATE;
+	//		}
+	//	}
+	//	// check draw.
+	//	else if (this->halfmoves == 50) {
+	//		this->endState = EndState::DRAW_BY_FIFTY_MOVE_RULE;
+	//	}
+	//	//// check insufficient material.
+	//	//else if (board.getFriendlyPieces(PieceType::PAWN) == 0ULL && board.getFriendlyPieces(PieceType::QUEEN) == 0ULL && 
+	//	//        board.getFriendlyPieces(PieceType::ROOK) == 0ULL) {
+	//	//    // TODO: add logic for checking insufficient material
+	//	//    return state;
+	//	//}
+	//	else if (this->threefoldRepetition) {
+	//		this->endState = EndState::DRAW_BY_THREEFOLD_REPETITION;
+	//	}
+	//}
 	template <bool whiteToMove>
 	void calcChecks() {
 		Index kingSquare = this->board.getKing<whiteToMove>();
@@ -42,7 +68,6 @@ private:
 		// get pseudo moves from the king's square.
 		bitboard bishopMoves = PseudoMoveGen::getPseudoBishopMoves(enemyOrEmpty, kingSquare, allPieces);
 		bitboard rookMoves = PseudoMoveGen::getPseudoRookMoves(enemyOrEmpty, kingSquare, allPieces);
-		bitboard queenMoves = PseudoMoveGen::getPseudoQueenMoves(enemyOrEmpty, kingSquare, allPieces);
 
 		bitboard bishops = this->board.getBishops<!whiteToMove>();
 		bitboard rooks = this->board.getRooks<!whiteToMove>();
@@ -53,29 +78,47 @@ private:
 		bitboard possiblePinningRooks = Constants::ROOK_ATTACKS[kingSquare] & (rooks | queens) & ~this->checkingPieces;
 
 		// check pins for each type (bishops, rooks, queens).
-		this->bishopPins = this->processPins<whiteToMove, true>(possiblePinningBishops, bishopMoves);
-		this->rookPins = this->processPins<whiteToMove, false>(possiblePinningRooks, rookMoves);
+		this->bishopPins = this->processPins<whiteToMove, true>(kingSquare, possiblePinningBishops, bishopMoves);
+		this->rookPins = this->processPins<whiteToMove, false>(kingSquare, possiblePinningRooks, rookMoves);
+
+		// check pinned en passant.
+		this->pinnedEnPassant = false;
+
+		if (this->board.enPassant != 0 && (Constants::SQUARE_BBS[kingSquare] & Chess::enPassantRank<whiteToMove>()) != 0) {
+			rookMoves &= Chess::enPassantRank<whiteToMove>();
+			possiblePinningRooks &= Chess::enPassantRank<whiteToMove>();
+			bitboard capturedPawn = Chess::pawnsBackward<whiteToMove>(this->board.enPassant);
+			bitboard capturingPawn = Chess::pawnsRevAttackLeft<whiteToMove>(this->board.enPassant) & this->board.getPawns<whiteToMove>();
+			if (capturingPawn == 0) capturingPawn = Chess::pawnsRevAttackRight<whiteToMove>(this->board.enPassant) & this->board.getPawns<whiteToMove>();
+			
+			if ((rookMoves & capturingPawn) != 0 || (rookMoves & capturedPawn) != 0) {
+				while (possiblePinningRooks != 0) {
+					Index square = Chess::popLSB(possiblePinningRooks);
+					bitboard pinningPieceMoves = PseudoMoveGen::getPseudoRookMoves(enemyOrEmpty, square, allPieces) & Chess::enPassantRank<whiteToMove>();
+					if ((pinningPieceMoves & capturingPawn) != 0 || (pinningPieceMoves & capturedPawn) != 0) {
+						this->pinnedEnPassant = true;
+						break;
+					}
+				}
+			}
+		}
 	}
 
 	template<bool whiteToMove, bool forBishopPins>
-	bitboard processPins(bitboard possiblePinningPieces, bitboard kingRayMoves) const {
+	bitboard processPins(Index kingSquare, bitboard possiblePinningPieces, bitboard kingRayMoves) const {
 		Index square;
-		bitboard pinningPieceMoves, pins = 0ULL;
+		bitboard betweenPieces, pins = 0ULL;
 		bitboard enemyOrEmpty = board.notFriendlyPieces<whiteToMove>();
 
 		// check for each potential pinning piece.
 		while (possiblePinningPieces != 0) {
-			square = Chess::lsb(possiblePinningPieces);
-			possiblePinningPieces &= (possiblePinningPieces - 1);
+			square = Chess::popLSB(possiblePinningPieces);
+			betweenPieces = Constants::BETWEEN_PIECES_TABLE[kingSquare][square];
 
-			// get the pseudo moves of that piece.
-			if constexpr (forBishopPins)
-				pinningPieceMoves = PseudoMoveGen::getPseudoBishopMoves(enemyOrEmpty, square, this->board.getAllPieces());
-			else
-				pinningPieceMoves = PseudoMoveGen::getPseudoRookMoves(enemyOrEmpty, square, this->board.getAllPieces());
-
-			// if the moves of the piece and the moves from the king overlapps, there is a pinned piece in between.
-			pins |= (kingRayMoves & pinningPieceMoves);
+			// if there is not exactly one piece in between, that piece is pinned.
+			if (Chess::numOfBits(betweenPieces & this->board.getAllPieces<whiteToMove>()) == 1) {
+				pins |= betweenPieces & this->board.getAllPieces<whiteToMove>();
+			}
 		}
 
 		return pins;
@@ -90,8 +133,10 @@ public:
 	bitboard stateKey;
 
 	bitboard checkingPieces;
+
 	bitboard rookPins;
 	bitboard bishopPins;
+	bool pinnedEnPassant;
 
 	EndState endState;
 	

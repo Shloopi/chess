@@ -14,7 +14,7 @@ int main() {
 
 	std::cout << state.board;
 	
-	for (int i = 6; i <= 6; i++) {
+	for (int i = 1; i <= 5; i++) {
 		test::timeDepth<true>(state, i);
 	}
 

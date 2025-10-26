@@ -53,6 +53,9 @@ namespace MoveGen {
 
 	template <bool whiteToMove>
 	bool hasLegalMoves(const BoardState& state);
+
+	template <bool whiteToMove>
+	uint8_t genPawnMoves(const BoardState& state, Move* moves);
 }
 
 

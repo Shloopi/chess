@@ -49,17 +49,18 @@ namespace MoveGen {
 
 	template <bool whiteToMove>
     bool enPassantExposeKing(const Board& board, bitboard enPassantTarget, bitboard capturingPawn) {
-        bitboard allPieces = board.getAllPieces();
         // king pos
         Index kingPos = board.getKing<whiteToMove>();
-		bitboard king = Constants::SQUARE_BBS[kingPos];
+        bitboard king = Constants::SQUARE_BBS[kingPos];
 
-        bitboard capturedPawn = Chess::pawnBackward<whiteToMove>(enPassantTarget);
-        
         if ((king & Chess::enPassantRank<whiteToMove>()) == 0) return false;
 
+        bitboard allPieces = board.getAllPieces();
+		bitboard enemyOrEmpty = board.notFriendlyPieces<whiteToMove>();
+        bitboard capturedPawn = Chess::pawnsBackward<whiteToMove>(enPassantTarget);
+
         // calculate the king's ray.
-        bitboard kingRay = PseudoMoveGen::getPseudoRookMoves(board.notFriendlyPieces<whiteToMove>(), kingPos, allPieces) & Chess::enPassantRank<whiteToMove>();
+        bitboard kingRay = PseudoMoveGen::getPseudoRookMoves(enemyOrEmpty, kingPos, allPieces) & Chess::enPassantRank<whiteToMove>();
         if ((kingRay & capturingPawn) == 0 && (kingRay & capturedPawn) == 0) return false;
 
         bitboard movesBitboard, rookRayPieces = (board.getRooks<!whiteToMove>() | board.getQueens<!whiteToMove>()) & Chess::enPassantRank<whiteToMove>();
@@ -68,7 +69,7 @@ namespace MoveGen {
         while (rookRayPieces != 0) {
             square = Chess::popLSB(rookRayPieces);
 
-            movesBitboard = PseudoMoveGen::getPseudoRookMoves(board.notFriendlyPieces<whiteToMove>(), square, allPieces) & Chess::enPassantRank<whiteToMove>();
+            movesBitboard = PseudoMoveGen::getPseudoRookMoves(enemyOrEmpty, square, allPieces) & Chess::enPassantRank<whiteToMove>();
 
             if ((movesBitboard & capturingPawn) != 0 || (movesBitboard & capturedPawn) != 0) return true;
         }
@@ -416,5 +417,82 @@ namespace MoveGen {
         }
 
         return false;
+    }
+    template<bool whiteToMove>
+    uint8_t genPawnMoves(const BoardState& state, Move* moves) {
+		bitboard pawns = state.board.getPawns<whiteToMove>();
+		bitboard enemy = state.board.getEnemyPieces<whiteToMove>() & state.board.enPassant;
+		bitboard empty = state.board.getFreeSquares();
+		Index enPassant = state.board.getEnPassantSquare();
+        bitboard checkRay = state.inCheck() ? state.checkingPieces | Constants::BETWEEN_PIECES_TABLE[state.board.getKing<whiteToMove>()][Chess::lsb(state.checkingPieces)] : Chess::MAX_BITBOARD;
+
+		// Pawns that can do pushes.
+		bitboard canSinglePush = pawns & Chess::pawnsBackward<whiteToMove>(empty) & ~state.bishopPins;
+		bitboard canDoublePush = canSinglePush & Chess::pawnsBackward2<whiteToMove>(empty) & Chess::doublePushRank<whiteToMove>() & checkRay;
+		canSinglePush &= checkRay;
+
+		// Pawns that can do left captures.
+		bitboard canLeftCapture = pawns & Chess::pawnsRevAttackLeft<whiteToMove>(enemy) & ~state.rookPins & Chess::pawnLeftMask<whiteToMove>() & checkRay;
+        
+        // Pawns that can do right captures.
+        bitboard canRightCapture = pawns & Chess::pawnsRevAttackRight<whiteToMove>(enemy) & ~state.rookPins & Chess::pawnRightMask<whiteToMove>() & checkRay;
+
+        // Remove PinnedPawns.
+        bitboard pinnedPushes = ((canSinglePush | canDoublePush) & state.rookPins);
+        while (((canSinglePush | canDoublePush) & state.rookPins) != 0) {
+
+        }
+
+        // Handle En Passant.
+        bitboard leftEnPassant, rightEnPassant;
+        if (state.board.enPassant != 0 && !state.pinnedEnPassant) {
+            leftEnPassant = canLeftCapture & state.board.enPassant;
+            canLeftCapture ^= leftEnPassant;
+
+            rightEnPassant = canRightCapture & state.board.enPassant;
+            canRightCapture ^= rightEnPassant;
+        }
+
+        // Seperate Promotions.
+		bitboard promoSinglePush = canSinglePush & Chess::promotionRank<whiteToMove>();
+		bitboard promoLeftCapture = canLeftCapture & Chess::promotionRank<whiteToMove>();
+		bitboard promoRightCapture = canRightCapture & Chess::promotionRank<whiteToMove>();
+		canSinglePush ^= promoSinglePush;
+		canLeftCapture ^= promoLeftCapture;
+		canRightCapture ^= promoRightCapture;
+
+		
+        
+		// ----- Insert Moves -----
+		Index startSquare, targetSquare;
+		Move* out = moves;
+
+		// Insert Single Pushes.
+        while (canSinglePush != 0) {
+            startSquare = Chess::popLSB(canSinglePush);
+			targetSquare = Chess::pawnForward<whiteToMove>(startSquare);
+			**out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::QUIET);
+		}
+
+        // Insert Double Pushes.
+        while (canDoublePush != 0) {
+            startSquare = Chess::popLSB(canDoublePush);
+            targetSquare = Chess::pawnForward2<whiteToMove>(startSquare);
+            **out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::DOUBLE_PAWN_PUSH);
+        }
+
+        // Insert Left Captures.
+        while (canLeftCapture != 0) {
+            startSquare = Chess::popLSB(canLeftCapture);
+            targetSquare = Chess::pawnAttackLeft<whiteToMove>(startSquare);
+            **out++ = Move(startSquare, targetSquare, Chess::PAWN, targetSquare == enPassant ? Chess::EN_PASSANT : Chess::QUIET);
+        }
+
+        // Insert Left Captures.
+        while (canRightCapture != 0) {
+            startSquare = Chess::popLSB(canRightCapture);
+            targetSquare = Chess::pawnAttackRight<whiteToMove>(startSquare);
+            **out++ = Move(startSquare, targetSquare, Chess::PAWN, targetSquare == enPassant ? Chess::EN_PASSANT : Chess::QUIET);
+        }
     }
 }

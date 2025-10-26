@@ -110,8 +110,8 @@ namespace Chess {
 
 	template <bool whiteToMove>
 	static constexpr inline bitboard promotionRank() {
-		if constexpr (whiteToMove) return RANK8;
-		else return RANK1;
+		if constexpr (whiteToMove) return RANK7;
+		else return RANK2;
 	}
 
 	// ------------- Bit Operations -------------
@@ -180,39 +180,75 @@ namespace Chess {
 
 	// ------------- Moves -------------
 	template<bool whiteToMove>
-	inline constexpr bitboard pawnForward(bitboard bb) {
+	inline constexpr Index pawnForward(Index startSquare) {
+		if constexpr (whiteToMove) return startSquare + 8;
+		else return startSquare - 8;
+	}
+
+	template<bool whiteToMove>
+	inline constexpr Index pawnForward2(Index startSquare) {
+		if constexpr (whiteToMove) return startSquare + 16;
+		else return startSquare - 16;
+	}
+
+	template<bool whiteToMove>
+	inline constexpr Index pawnAttackLeft(Index startSquare) {
+		if constexpr (whiteToMove) return startSquare + 7;
+		else return startSquare - 7;
+	}
+
+	template<bool whiteToMove>
+	inline constexpr Index pawnAttackRight(Index startSquare) {
+		if constexpr (whiteToMove) return startSquare + 9;
+		else return startSquare - 9;
+	}
+
+	template<bool whiteToMove>
+	inline constexpr bitboard pawnsForward(bitboard bb) {
 		if constexpr (whiteToMove) return bb << 8;
 		else return bb >> 8;
 	}
 
 	template<bool whiteToMove>
-	inline constexpr bitboard pawnBackward(bitboard bb) {
+	inline constexpr bitboard pawnsBackward(bitboard bb) {
 		if constexpr (whiteToMove) return bb >> 8;
 		else return bb << 8;
 	}
 
 	template<bool whiteToMove>
-	inline constexpr bitboard pawnForward2(bitboard bb) {
+	inline constexpr bitboard pawnsForward2(bitboard bb) {
 		if constexpr (whiteToMove) return bb << 16;
 		else return bb >> 16;
 	}
 
 	template<bool whiteToMove>
-	inline constexpr bitboard pawnBackward2(bitboard bb) {
+	inline constexpr bitboard pawnsBackward2(bitboard bb) {
 		if constexpr (whiteToMove) return bb >> 16;
 		else return bb << 16;
 	}
 
 	template<bool whiteToMove>
-	inline constexpr bitboard pawnAttackLeft(bitboard bb) {
+	inline constexpr bitboard pawnsAttackLeft(bitboard bb) {
 		if constexpr (whiteToMove) return bb << 7;
 		else return bb >> 7;
 	}
 
 	template<bool whiteToMove>
-	inline constexpr bitboard pawnAttackRight(bitboard bb) {
+	inline constexpr bitboard pawnsRevAttackLeft(bitboard bb) {
+		if constexpr (whiteToMove) return bb >> 7;
+		else return bb << 7;
+	}
+
+	template<bool whiteToMove>
+	inline constexpr bitboard pawnsAttackRight(bitboard bb) {
 		if constexpr (whiteToMove) return bb << 9;
 		else return bb >> 9;
+	}
+
+	template<bool whiteToMove>
+	inline constexpr bitboard pawnsRevAttackRight(bitboard bb) {
+		if constexpr (whiteToMove) return bb >> 9;
+		else return bb << 9;
 	}
 
 	template<bool whiteToMove>
