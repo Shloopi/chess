@@ -6,7 +6,6 @@
 #include <iostream>
 #include "Constants.hpp"
 #include <string_view>
-#include <string_view>
 
 using bitboard = uint64_t;
 using File = int8_t;
@@ -104,8 +103,8 @@ namespace Chess {
 
 	template <bool whiteToMove>
 	static constexpr inline bitboard doublePushRank() {
-		if constexpr (whiteToMove) return RANK4;
-		else return RANK5;
+		if constexpr (whiteToMove) return RANK2;
+		else return RANK7;
 	}
 
 	template <bool whiteToMove>

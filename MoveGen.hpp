@@ -13,63 +13,36 @@ namespace MoveGen {
 		PseudoMoveGen::init();
 	}
 	template <bool whiteToMove>
-	bitboard movesLegalityWhileChecked(const BoardState& state, Index sourceSquare, bitboard targetSquares);
+	uint8_t genAllLegalMoves(const BoardState& state, Move* moves);
 
 	template <bool whiteToMove>
-	bitboard reducePinnedPiecesMoves(const BoardState& state, Index sourceSquare, bitboard targetSquares);
-
-	template <bool whiteToMove>
-	bool enPassantExposeKing(const Board& board, bitboard enPassantTarget, bitboard capturingPawn);
-
-	template <bool whiteToMove>
-	bitboard genBitboardLegalPawnMoves(const BoardState& state, bitboard pawns);
-
-	template <bool whiteToMove>
-	void genBitboardsLegalPawnMoves(const BoardState& state, bitboard pawns, bitboard& singlePushes, bitboard& doublePushes, bitboard& leftCaptures, bitboard& rightCaptures);
-	
-	template <bool whiteToMove, Piece piece>
-	bitboard genLegalMoves(const BoardState& state, Index square);
-
-	template<bool whiteToMove, Piece piece>
-	Flag calcFlag(Index sourceSquare, Index targetSquare);
-
-	template <bool whiteToMove, Piece piece>
-	void insertMoves(const Board& board, Move* moves, unsigned short& moveCount, Index sourceSquare, bitboard moveBitboard);
-
-	template <bool whiteToMove>
-	void insertPawnMoves(const Board& board, Move* moves, unsigned short& moveCount, bitboard moveBitboard, const Index StartSquareDelta, Flag flag);
-
-	template <bool whiteToMove>
-	void genLegalPawnMoves(const Board& board, bitboard pawns, Move* moves, unsigned short& moveCount);
-
-	template <bool whiteToMove>
-	unsigned short genAllLegalMoves(const BoardState& state, Move* moves);
-
-	template <bool whiteToMove>
-	void genLegalHumanMoves(const BoardState& state, Index square, Move* moves, unsigned short& moveCount);
-
-	template <bool whiteToMove>
-	bitboard genLegalKingMoves(const BoardState& state, Index square);
+	uint8_t countAllLegalMoves(const BoardState& state);
 
 	template <bool whiteToMove>
 	bool hasLegalMoves(const BoardState& state);
 
 	template <bool whiteToMove>
+	bitboard movesLegalityWhileChecked(const BoardState& state, Index sourceSquare, bitboard targetSquares);
+
+	template <bool whiteToMove>
+	bitboard reducePinnedPiecesMoves(const BoardState& state, Index sourceSquare, bitboard targetSquares);
+
+	template <bool whiteToMove, bool countOnly = false>
 	void genPawnMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
 
-	template <bool whiteToMove>
+	template <bool whiteToMove, bool countOnly = false>
 	void genKingMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
 
-	template <bool whiteToMove>
+	template <bool whiteToMove, bool countOnly = false>
 	void genKnightMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
 
-	template <bool whiteToMove>
+	template <bool whiteToMove, bool countOnly = false>
 	void genBishopMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
 
-	template <bool whiteToMove>
+	template <bool whiteToMove, bool countOnly = false>
 	void genQueenMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
 
-	template <bool whiteToMove>
+	template <bool whiteToMove, bool countOnly = false>
 	void genRookMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
 }
 

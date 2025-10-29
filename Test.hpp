@@ -13,7 +13,7 @@ namespace test {
         unsigned short moveCount = MoveGen::genAllLegalMoves<whiteToMove>(state, &moves[0]);
  
         if (depth == 1) return moveCount;
-
+        if (depth == 2) std::cout << "Moves: " + static_cast<int>(moveCount);
         uint64_t count = 0;
 
         for (unsigned short i = 0; i < moveCount; i++) {

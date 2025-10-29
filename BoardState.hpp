@@ -7,7 +7,6 @@
 #include <stack>
 #include "PseudoMoveGen.hpp"
 #include "Board.hpp"
-#include "MoveGen.hpp"
 
 class BoardState {
 private:
@@ -144,11 +143,13 @@ public:
 	std::unordered_map<bitboard, char> positionsRep;
 	bool threefoldRepetition;
 
-	BoardState() : halfmoves(0), fullmoves(1), stateKey(0), checkingPieces(0), 
-									rookPins(0), bishopPins(0), endState(EndState::ONGOING), threefoldRepetition(false) {}
+	BoardState() :	halfmoves(0), fullmoves(1), stateKey(0), checkingPieces(0), 
+					rookPins(0), bishopPins(0), endState(EndState::ONGOING), 
+					threefoldRepetition(false), pinnedEnPassant(false) {}
 
-	BoardState(Board board) : halfmoves(0), fullmoves(1), stateKey(0), checkingPieces(0),
-		rookPins(0), bishopPins(0), endState(EndState::ONGOING), threefoldRepetition(false) {
+	BoardState(Board board) :	halfmoves(0), fullmoves(1), stateKey(0), checkingPieces(0),
+								rookPins(0), bishopPins(0), endState(EndState::ONGOING), 
+								threefoldRepetition(false), pinnedEnPassant(false) {
 		this->board = board;
 	}
 
