@@ -59,6 +59,18 @@ namespace MoveGen {
 
 	template <bool whiteToMove>
 	void genKingMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
+
+	template <bool whiteToMove>
+	void genKnightMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
+
+	template <bool whiteToMove>
+	void genBishopMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
+
+	template <bool whiteToMove>
+	void genQueenMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
+
+	template <bool whiteToMove>
+	void genRookMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
 }
 
 

@@ -2,10 +2,6 @@
 #include "BoardState.hpp"
 
 namespace MoveGen {
-
-    template bitboard MoveGen::movesLegalityWhileChecked<true>(const BoardState& state, Index sourceSquare, bitboard targetSquares);
-    template bitboard MoveGen::movesLegalityWhileChecked<false>(const BoardState& state, Index sourceSquare, bitboard targetSquares);
-
     template <bool whiteToMove>
     bitboard movesLegalityWhileChecked(const BoardState& state, Index sourceSquare, bitboard targetSquares) {
         // if there is no check, return all moves.
@@ -317,38 +313,7 @@ namespace MoveGen {
             MoveGen::insertPawnMoves<whiteToMove>(board, moves, moveCount, rightCaptures, whiteToMove ? 9 : -7, Chess::QUIET);
         }
     }
-
-    template <bool whiteToMove>
-    void genLegalHumanMoves(const BoardState& state, Index square, Move* moves, unsigned short& moveCount) {
-        Piece type = state.board.getPieceAt<whiteToMove>(square);
-        bitboard movesBitboard;
-
-        if (type == Chess::PAWN) {
-            MoveGen::genLegalPawnMoves<whiteToMove>(state.board, (1ULL << square), moves, moveCount);
-        }
-        else {
-            if (type == Chess::KNIGHT) {
-                movesBitboard = MoveGen::genLegalMoves<whiteToMove, Chess::KNIGHT>(state, square);
-                MoveGen::insertMoves<whiteToMove, Chess::KNIGHT>(state.board, moves, moveCount, square, movesBitboard);
-            }
-            if (type == Chess::BISHOP) {
-                movesBitboard = MoveGen::genLegalMoves<whiteToMove, Chess::BISHOP>(state, square);
-                MoveGen::insertMoves<whiteToMove, Chess::BISHOP>(state.board, moves, moveCount, square, movesBitboard);
-            }
-            if (type == Chess::ROOK) {
-                movesBitboard = MoveGen::genLegalMoves<whiteToMove, Chess::ROOK>(state, square);
-                MoveGen::insertMoves<whiteToMove, Chess::ROOK>(state.board, moves, moveCount, square, movesBitboard);
-            }
-            if (type == Chess::QUEEN) {
-                movesBitboard = MoveGen::genLegalMoves<whiteToMove, Chess::QUEEN>(state, square);
-                MoveGen::insertMoves<whiteToMove, Chess::QUEEN>(state.board, moves, moveCount, square, movesBitboard);
-            }
-            if (type == Chess::KING) {
-                movesBitboard = MoveGen::genLegalMoves<whiteToMove, Chess::KING>(state, square);
-                MoveGen::insertMoves<whiteToMove, Chess::KING>(state.board, moves, moveCount, square, movesBitboard);
-            }
-        }
-    }
+        
 
     template unsigned short genAllLegalMoves<true>(const BoardState& state, Move* moves);
     template unsigned short genAllLegalMoves<false>(const BoardState& state, Move* moves);
@@ -358,28 +323,17 @@ namespace MoveGen {
         unsigned short moveCount = 0;
 
         if (state.numOfChecks() > 1) {
-            MoveGen::genLegalHumanMoves<whiteToMove>(state, state.board.getKing<whiteToMove>(), moves, moveCount);
-            return moveCount;
+			MoveGen::genKingMoves<whiteToMove>(state, moves, moveCount);
         }
-
-        // get all pawns.
-        bitboard pawns = state.board.getPawns<whiteToMove>();
-
-        // insert pawn moves.
-        MoveGen::genLegalPawnMoves<whiteToMove>(state.board, pawns, moves, moveCount);
-
-        // get all other pieces.
-        bitboard nonPawnPieces = state.board.getAllPieces<whiteToMove>() & ~pawns;
-
-        Index square;
-
-        // insert all other piece moves.
-        while (nonPawnPieces != 0) {
-            square = Chess::popLSB(nonPawnPieces);
-
-            MoveGen::genLegalHumanMoves<whiteToMove>(state, square, moves, moveCount);
+        else {
+			MoveGen::genPawnMoves<whiteToMove>(state, moves, moveCount);
+			MoveGen::genKnightMoves<whiteToMove>(state, moves, moveCount);
+			MoveGen::genBishopMoves<whiteToMove>(state, moves, moveCount);
+			MoveGen::genRookMoves<whiteToMove>(state, moves, moveCount);
+			MoveGen::genQueenMoves<whiteToMove>(state, moves, moveCount);
+            MoveGen::genKingMoves<whiteToMove>(state, moves, moveCount);
         }
-
+        
         return moveCount;
     }
 
@@ -551,7 +505,6 @@ namespace MoveGen {
             *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::ROOK_PROMOTION);
             *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::QUEEN_PROMOTION);
         }
-
         moveCount = out - moves;
     }
 
@@ -590,6 +543,98 @@ namespace MoveGen {
             *out++ = Move(kingSquare, targetCastlingSquare, Chess::KING, Chess::LONG_CASTLING);
         }
 
+        moveCount = out - moves;
+    }
+    template <bool whiteToMove>
+    void genKnightMoves(const BoardState& state, Move* moves, uint8_t& moveCount) {
+        Index startSquare, targetSquare;
+        bitboard movesBitboard = 0ULL, enemyOrEmpty = state.board.notFriendlyPieces<whiteToMove>();
+		bitboard knights = state.board.getKnights<whiteToMove>();
+		Move* out = moves + moveCount;
+
+        while (knights != 0) {
+            startSquare = Chess::popLSB(knights);
+			movesBitboard = PseudoMoveGen::getPseudoKnightMoves(enemyOrEmpty, square);
+            movesBitboard = MoveGen::movesLegalityWhileChecked<whiteToMove>(state, startSquare, movesBitboard);
+            movesBitboard = MoveGen::reducePinnedPiecesMoves<whiteToMove>(state, startSquare, movesBitboard);
+
+            // asd
+            while (movesBitboard != 0ULL) {
+                targetSquare = Chess::popLSB(movesBitboard);
+				*out++ = Move(startSquare, targetSquare, Chess::KNIGHT, Chess::QUIET);
+			}
+        }
+        moveCount = out - moves;
+    }
+
+    template <bool whiteToMove>
+    void genBishopMoves(const BoardState& state, Move* moves, uint8_t& moveCount) {
+        Index startSquare, targetSquare;
+        bitboard movesBitboard = 0ULL, enemyOrEmpty = state.board.notFriendlyPieces<whiteToMove>();
+        bitboard allPieces = state.board.getAllPieces(), bishops = state.board.getBishops<whiteToMove>();
+        Move* out = moves + moveCount;
+
+        while (bishops != 0) {
+            startSquare = Chess::popLSB(bishops);
+            movesBitboard = PseudoMoveGen::getPseudoBishopMoves(enemyOrEmpty, startSquare, allPieces);
+            movesBitboard = MoveGen::movesLegalityWhileChecked<whiteToMove>(state, startSquare, movesBitboard);
+            movesBitboard = MoveGen::reducePinnedPiecesMoves<whiteToMove>(state, startSquare, movesBitboard);
+
+            while (movesBitboard != 0ULL) {
+                targetSquare = Chess::popLSB(movesBitboard);
+                *out++ = Move(startSquare, targetSquare, Chess::BISHOP, Chess::QUIET);
+            }
+        }
+        moveCount = out - moves;
+    }
+
+    template <bool whiteToMove>
+    void genQueenMoves(const BoardState& state, Move* moves, uint8_t& moveCount) {
+        Index startSquare, targetSquare;
+        bitboard movesBitboard = 0ULL, enemyOrEmpty = state.board.notFriendlyPieces<whiteToMove>();
+		bitboard allPieces = state.board.getAllPieces(),  queens = state.board.getQueens<whiteToMove>();
+        Move* out = moves + moveCount;
+
+        while (queens != 0) {
+            startSquare = Chess::popLSB(queens);
+            movesBitboard = PseudoMoveGen::getPseudoQueenMoves(enemyOrEmpty, startSquare, allPieces);
+            movesBitboard = MoveGen::movesLegalityWhileChecked<whiteToMove>(state, startSquare, movesBitboard);
+            movesBitboard = MoveGen::reducePinnedPiecesMoves<whiteToMove>(state, startSquare, movesBitboard);
+
+            while (movesBitboard != 0ULL) {
+                targetSquare = Chess::popLSB(movesBitboard);
+                *out++ = Move(startSquare, targetSquare, Chess::QUEEN, Chess::QUIET);
+            }
+        }
+        moveCount = out - moves;
+    }
+
+    template <bool whiteToMove>
+    void genRookMoves(const BoardState& state, Move* moves, uint8_t& moveCount) {
+        Flag flag;
+        Index startSquare, targetSquare;
+        bitboard startSquareBB, movesBitboard = 0ULL, enemyOrEmpty = state.board.notFriendlyPieces<whiteToMove>();
+        bitboard allPieces = state.board.getAllPieces(), rooks = state.board.getRooks<whiteToMove>();
+        Move* out = moves + moveCount;
+
+        while (rooks != 0) {
+            startSquare = Chess::popLSB(rooks);
+			startSquareBB = Constants::SQUARE_BBS[startSquare];
+
+            movesBitboard = PseudoMoveGen::getPseudoRookMoves(enemyOrEmpty, startSquare, allPieces);
+            movesBitboard = MoveGen::movesLegalityWhileChecked<whiteToMove>(state, startSquare, movesBitboard);
+            movesBitboard = MoveGen::reducePinnedPiecesMoves<whiteToMove>(state, startSquare, movesBitboard);
+
+            while (movesBitboard != 0ULL) {
+                targetSquare = Chess::popLSB(movesBitboard);
+				
+                if ((startSquareBB & Board::startingKingsideRook<whiteToMove>()) != 0) flag = Chess::REMOVE_SHORT_CASTLING;
+                else if ((startSquareBB & Board::startingQueensideRook<whiteToMove>()) != 0) flag = Chess::REMOVE_LONG_CASTLING;
+                else flag = Chess::QUIET;
+
+                *out++ = Move(startSquare, targetSquare, Chess::ROOK, flag);
+            }
+        }
         moveCount = out - moves;
     }
 }
