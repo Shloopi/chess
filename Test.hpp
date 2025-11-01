@@ -8,21 +8,24 @@ namespace test {
     static inline std::array<std::array<Move, 218>, 12> movesBuffer;
 
     template<bool whiteToMove>
-    uint64_t countMoves(BoardState& state, uint8_t depth) {
+    uint64_t countMoves(const BoardState& state, uint8_t depth, Move move) {
         std::array<Move, 218>& moves = movesBuffer[depth];
-        unsigned short moveCount = MoveGen::genAllLegalMoves<whiteToMove>(state, &moves[0]);
- 
-        if (depth == 1) return moveCount;
-        if (depth == 2) std::cout << "Moves: " + static_cast<int>(moveCount);
+         uint16_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(state, &moves[0]);
+
+         if (depth == 1) {
+             return moveCount;
+         }
+        
         uint64_t count = 0;
 
-        for (unsigned short i = 0; i < moveCount; i++) {
+        for (uint8_t i = 0; i < moveCount; i++) {
             const Move move = moves[i];
+
 
             Board board = state.board.branch<whiteToMove>(move);
             BoardState state2 = state.branchState<!whiteToMove>(board);
 
-            count += test::countMoves<!whiteToMove>(state2, depth - 1);
+            count += test::countMoves<!whiteToMove>(state2, depth - 1, move);
         }
         return count;
     }
@@ -33,7 +36,7 @@ namespace test {
 
         auto start = std::chrono::high_resolution_clock::now();
 
-        moves_count = test::countMoves<whiteToMove>(state, depth);
+        moves_count = test::countMoves<whiteToMove>(state, depth, Move());
 
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = end - start;

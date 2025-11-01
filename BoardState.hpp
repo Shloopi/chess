@@ -38,15 +38,17 @@ private:
 	template <bool whiteToMove>
 	void calcChecks() {
 		Index kingSquare = this->board.getKing<whiteToMove>();
+		bitboard king = Constants::SQUARE_BBS[kingSquare];
 		bitboard allPieces = this->board.getAllPieces();
 		bitboard enemyOrEmpty = board.notFriendlyPieces<whiteToMove>();
 
 		this->checkingPieces = 0ULL;
 
 		// knight checks.
-		this->checkingPieces |= Constants::KNIGHT_MOVES[kingSquare] & this->board.getKnights<!whiteToMove>();
+		this->checkingPieces |= (Constants::KNIGHT_MOVES[kingSquare] & this->board.getKnights<!whiteToMove>());
 
 		// bishop checks.
+		this->checkingPieces |= (PseudoMoveGen::getPseudoBishopMoves(enemyOrEmpty, kingSquare, allPieces) & this->board.getBishops<!whiteToMove>());
 
 		// rook checks.
 		this->checkingPieces |= (PseudoMoveGen::getPseudoRookMoves(enemyOrEmpty, kingSquare, allPieces) & this->board.getRooks<!whiteToMove>());
@@ -55,7 +57,8 @@ private:
 		this->checkingPieces |= (PseudoMoveGen::getPseudoQueenMoves(enemyOrEmpty, kingSquare, allPieces) & this->board.getQueens<!whiteToMove>());
 
 		// pawn checks.
-		this->checkingPieces |= (PseudoMoveGen::getPawnCaptures<!whiteToMove>(this->board.getPawns<!whiteToMove>()) & Constants::SQUARE_BBS[kingSquare]);
+		this->checkingPieces |= (((Chess::pawnsRevAttackLeft<whiteToMove>(king) & Chess::pawnLeftMask<whiteToMove>()) | 
+			(Chess::pawnsRevAttackRight<whiteToMove>(king) & Chess::pawnRightMask<whiteToMove>())) & this->board.getPawns<!whiteToMove>());
 	}
 
 	template <bool whiteToMove>
@@ -108,15 +111,17 @@ private:
 		Index square;
 		bitboard betweenPieces, pins = 0ULL;
 		bitboard enemyOrEmpty = board.notFriendlyPieces<whiteToMove>();
+		bitboard allPieces = this->board.getAllPieces();
+		bitboard friendlyPiece = this->board.getAllPieces<whiteToMove>();
 
 		// check for each potential pinning piece.
 		while (possiblePinningPieces != 0) {
 			square = Chess::popLSB(possiblePinningPieces);
 			betweenPieces = Constants::BETWEEN_PIECES_TABLE[kingSquare][square];
 
-			// if there is not exactly one piece in between, that piece is pinned.
-			if (Chess::numOfBits(betweenPieces & this->board.getAllPieces<whiteToMove>()) == 1) {
-				pins |= betweenPieces & this->board.getAllPieces<whiteToMove>();
+			// if there is exactly one piece in between, that piece is pinned.
+			if (Chess::numOfBits(betweenPieces & allPieces) == 1) {
+				pins |= (betweenPieces & friendlyPiece);
 			}
 		}
 
@@ -190,6 +195,7 @@ public:
 	template <bool whiteToMove>
 	bool isSquareAttacked(Index square, bitboard pieces) const {
 		bitboard enemyOrEmpty = board.notFriendlyPieces<whiteToMove>();
+		bitboard squareBB = Constants::SQUARE_BBS[square];
 
 		// knight attacks.
 		if ((Constants::KNIGHT_MOVES[square] & this->board.getKnights<!whiteToMove>()) != 0) return true;
@@ -204,18 +210,32 @@ public:
 		if ((PseudoMoveGen::getPseudoQueenMoves(enemyOrEmpty, square, pieces) & this->board.getQueens<!whiteToMove>()) != 0) return true;
 
 		// pawn attacks.
-		if ((PseudoMoveGen::getPawnCaptures<!whiteToMove>(this->board.getPawns<!whiteToMove>()) & Constants::SQUARE_BBS[square]) != 0) return true;
+		if ((((Chess::pawnsRevAttackLeft<whiteToMove>(squareBB) & Chess::pawnLeftMask<whiteToMove>()) |
+			(Chess::pawnsRevAttackRight<whiteToMove>(squareBB) & Chess::pawnRightMask<whiteToMove>())) & this->board.getPawns<!whiteToMove>()) != 0) return true;
 
 		return false;
 	}
 	template <bool whiteToMove>
-	BoardState branchState(Board& board) {
+	BoardState branchState(Board& board) const {
 		BoardState state(board);
 		state.halfmoves = this->halfmoves + (!whiteToMove ? 0 : 1);
 		state.fullmoves = this->fullmoves + 1;
 		state.init<whiteToMove>();
 
 		return state;
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const BoardState& state) {
+		os << state.board;
+		os << "Halfmoves: " << static_cast<int>(state.halfmoves) << '\n';
+		os << "Fullmoves: " << static_cast<int>(state.fullmoves) << '\n';
+		os << "State Key: \n" << state.stateKey << '\n';
+		os << "Checking Pieces: \n" << Chess::showBitboard(state.checkingPieces);
+		os << "Rook Pins: \n" << Chess::showBitboard(state.rookPins);
+		os << "Bishop Pins: \n" << Chess::showBitboard(state.bishopPins);
+		os << "Pinned En Passant: " << state.pinnedEnPassant << '\n';
+		os << "End State: " << static_cast<int>(state.endState) << '\n';
+		return os;
 	}
 };
 

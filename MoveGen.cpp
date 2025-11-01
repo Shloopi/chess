@@ -42,12 +42,12 @@ namespace MoveGen {
         return targetSquares;
     }
 
-    template uint8_t genAllLegalMoves<true>(const BoardState& state, Move* moves);
-    template uint8_t genAllLegalMoves<false>(const BoardState& state, Move* moves);
+    template uint16_t genAllLegalMoves<true>(const BoardState& state, Move* moves);
+    template uint16_t genAllLegalMoves<false>(const BoardState& state, Move* moves);
 
 	template <bool whiteToMove>
-    uint8_t genAllLegalMoves(const BoardState& state, Move* moves) {
-        uint8_t moveCount = 0;
+    uint16_t genAllLegalMoves(const BoardState& state, Move* moves) {
+        uint16_t moveCount = 0;
 
         if (state.numOfChecks() > 1) {
 			MoveGen::genKingMoves<whiteToMove>(state, moves, moveCount);
@@ -65,8 +65,8 @@ namespace MoveGen {
     }
 
     template<bool whiteToMove>
-    uint8_t countAllLegalMoves(const BoardState& state) {
-        uint8_t moveCount = 0;
+    uint16_t countAllLegalMoves(const BoardState& state) {
+        uint16_t moveCount = 0;
 
         if (state.numOfChecks() > 1) {
             MoveGen::genKingMoves<whiteToMove, true>(state, NULL, moveCount);
@@ -85,7 +85,7 @@ namespace MoveGen {
 
     template <bool whiteToMove>
     bool hasLegalMoves(const BoardState& state) {
-        uint8_t moveCount = 0;
+        uint16_t moveCount = 0;
 
         if (state.numOfChecks() > 1) {
             MoveGen::genKingMoves<whiteToMove, true>(state, NULL, moveCount);
@@ -109,9 +109,9 @@ namespace MoveGen {
     }
 
     template<bool whiteToMove, bool countOnly>
-    void genPawnMoves(const BoardState& state, Move* moves, uint8_t& moveCount) {
+    void genPawnMoves(const BoardState& state, Move* moves, uint16_t& moveCount) {
 		bitboard pawns = state.board.getPawns<whiteToMove>();
-		bitboard enemy = state.board.getEnemyPieces<whiteToMove>() & state.board.enPassant;
+		bitboard enemy = state.board.getEnemyPieces<whiteToMove>() | state.board.enPassant;
 		bitboard empty = state.board.getFreeSquares();
 		Index enPassant = state.board.getEnPassantSquare();
         bitboard checkRay = state.inCheck() ? state.checkingPieces | Constants::BETWEEN_PIECES_TABLE[state.board.getKing<whiteToMove>()][Chess::lsb(state.checkingPieces)] : Chess::MAX_BITBOARD;
@@ -178,7 +178,7 @@ namespace MoveGen {
 		canSinglePush ^= promoSinglePush;
 		canLeftCapture ^= promoLeftCapture;
 		canRightCapture ^= promoRightCapture;
-        
+
         // Count Only.
         if constexpr (countOnly) {
             moveCount += Chess::numOfBits(canSinglePush) + Chess::numOfBits(canDoublePush) +
@@ -255,7 +255,7 @@ namespace MoveGen {
     }
 
     template<bool whiteToMove, bool countOnly>
-    void genKingMoves(const BoardState& state, Move* moves, uint8_t& moveCount) {
+    void genKingMoves(const BoardState& state, Move* moves, uint16_t& moveCount) {
         Index kingSquare = state.board.getKing<whiteToMove>();
         bitboard pieces = state.board.getAllPieces();
         bitboard noKingPieces = pieces & ~Constants::SQUARE_BBS[kingSquare];
@@ -295,7 +295,7 @@ namespace MoveGen {
         if constexpr (!countOnly) moveCount = out - moves;
     }
     template <bool whiteToMove, bool countOnly>
-    void genKnightMoves(const BoardState& state, Move* moves, uint8_t& moveCount) {
+    void genKnightMoves(const BoardState& state, Move* moves, uint16_t& moveCount) {
         Index startSquare, targetSquare;
         bitboard movesBitboard = 0ULL, enemyOrEmpty = state.board.notFriendlyPieces<whiteToMove>();
 		bitboard knights = state.board.getKnights<whiteToMove>();
@@ -319,7 +319,7 @@ namespace MoveGen {
     }
 
     template <bool whiteToMove, bool countOnly>
-    void genBishopMoves(const BoardState& state, Move* moves, uint8_t& moveCount) {
+    void genBishopMoves(const BoardState& state, Move* moves, uint16_t& moveCount) {
         Index startSquare, targetSquare;
         bitboard movesBitboard = 0ULL, enemyOrEmpty = state.board.notFriendlyPieces<whiteToMove>();
         bitboard allPieces = state.board.getAllPieces(), bishops = state.board.getBishops<whiteToMove>();
@@ -343,7 +343,7 @@ namespace MoveGen {
     }
 
     template <bool whiteToMove, bool countOnly>
-    void genQueenMoves(const BoardState& state, Move* moves, uint8_t& moveCount) {
+    void genQueenMoves(const BoardState& state, Move* moves, uint16_t& moveCount) {
         Index startSquare, targetSquare;
         bitboard movesBitboard = 0ULL, enemyOrEmpty = state.board.notFriendlyPieces<whiteToMove>();
 		bitboard allPieces = state.board.getAllPieces(),  queens = state.board.getQueens<whiteToMove>();
@@ -367,7 +367,7 @@ namespace MoveGen {
     }
 
     template <bool whiteToMove, bool countOnly>
-    void genRookMoves(const BoardState& state, Move* moves, uint8_t& moveCount) {
+    void genRookMoves(const BoardState& state, Move* moves, uint16_t& moveCount) {
         Flag flag;
         Index startSquare, targetSquare;
         bitboard startSquareBB, movesBitboard = 0ULL, enemyOrEmpty = state.board.notFriendlyPieces<whiteToMove>();

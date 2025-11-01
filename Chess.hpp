@@ -134,6 +134,26 @@ namespace Chess {
 
 		std::cout << toPrint << std::endl;
 	}
+	inline std::string showBitboard(bitboard bitboard, Index piece = -1ULL, std::string c = "1") {
+		std::string toPrint = "";
+
+		for (int rank = Chess::RANK_SIZE - 1; rank >= 0; rank--) {
+			for (int file = 0; file < Chess::FILE_SIZE; file++) {
+				int Index = rank * Chess::RANK_SIZE + file;
+
+				if (Index == piece) {
+					toPrint += "X ";
+					continue;
+				}
+				toPrint += ((bitboard & Constants::SQUARE_BBS[Index]) != 0) ? c : "_";
+				toPrint += " ";
+
+			}
+			toPrint += "\n";
+		}
+
+		return toPrint + '\n';
+	}
 
 	constexpr Index index64[64] = {
 		 0,  1, 48,  2, 57, 49, 28,  3,

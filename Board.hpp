@@ -311,7 +311,7 @@ public:
 	}
 
 	template <bool whiteToMove, Piece piece, Flag flag = Chess::QUIET>
-	Board branch(bitboard from, bitboard to) {
+	Board branch(bitboard from, bitboard to) const {
 		bitboard change = from | to;
 		bitboard notFrom = ~from;
 		bitboard notTo = ~to;
@@ -532,7 +532,7 @@ public:
 	}
 
 	template <bool whiteToMove>
-	Board branch(Move move) {
+	Board branch(Move move) const {
 		switch (move.piece) {
 			case Chess::PAWN:
 			{

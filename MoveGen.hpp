@@ -13,10 +13,10 @@ namespace MoveGen {
 		PseudoMoveGen::init();
 	}
 	template <bool whiteToMove>
-	uint8_t genAllLegalMoves(const BoardState& state, Move* moves);
+	uint16_t genAllLegalMoves(const BoardState& state, Move* moves);
 
 	template <bool whiteToMove>
-	uint8_t countAllLegalMoves(const BoardState& state);
+	uint16_t countAllLegalMoves(const BoardState& state);
 
 	template <bool whiteToMove>
 	bool hasLegalMoves(const BoardState& state);
@@ -28,22 +28,22 @@ namespace MoveGen {
 	bitboard reducePinnedPiecesMoves(const BoardState& state, Index sourceSquare, bitboard targetSquares);
 
 	template <bool whiteToMove, bool countOnly = false>
-	void genPawnMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
+	void genPawnMoves(const BoardState& state, Move* moves, uint16_t& moveCount);
 
 	template <bool whiteToMove, bool countOnly = false>
-	void genKingMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
+	void genKingMoves(const BoardState& state, Move* moves, uint16_t& moveCount);
 
 	template <bool whiteToMove, bool countOnly = false>
-	void genKnightMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
+	void genKnightMoves(const BoardState& state, Move* moves, uint16_t& moveCount);
 
 	template <bool whiteToMove, bool countOnly = false>
-	void genBishopMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
+	void genBishopMoves(const BoardState& state, Move* moves, uint16_t& moveCount);
 
 	template <bool whiteToMove, bool countOnly = false>
-	void genQueenMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
+	void genQueenMoves(const BoardState& state, Move* moves, uint16_t& moveCount);
 
 	template <bool whiteToMove, bool countOnly = false>
-	void genRookMoves(const BoardState& state, Move* moves, uint8_t& moveCount);
+	void genRookMoves(const BoardState& state, Move* moves, uint16_t& moveCount);
 }
 
 
