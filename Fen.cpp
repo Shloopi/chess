@@ -22,6 +22,26 @@ static Piece getPieceHelper(char c) {
     if (c == 'K' || c == 'k') return Chess::KING;
     throw std::invalid_argument("FenHandler::getPiece - invalid piece character");
 }
+static char getCharFromPiece(Piece piece, bool isWhite) {
+    if (isWhite) {
+        if (piece == Chess::PAWN) return 'P';
+        if (piece == Chess::KNIGHT) return 'N';
+        if (piece == Chess::BISHOP) return 'B';
+        if (piece == Chess::ROOK) return 'R';
+        if (piece == Chess::QUEEN) return 'Q';
+        if (piece == Chess::KING) return 'K';
+    }
+    else {
+        if (piece == Chess::PAWN) return 'p';
+        if (piece == Chess::KNIGHT) return 'n';
+        if (piece == Chess::BISHOP) return 'b';
+        if (piece == Chess::ROOK) return 'r';
+        if (piece == Chess::QUEEN) return 'q';
+        if (piece == Chess::KING) return 'k';
+    }
+    
+    throw std::invalid_argument("FenHandler::getPiece - invalid piece character" + (piece + '0'));
+}
 
 namespace Fen {
     bool handleFen(const std::string& fen, BoardState& state) {
@@ -102,5 +122,91 @@ namespace Fen {
         }
 
 		board.setCastlingRights(whiteLeftCastle, whiteRightCastle, blackLeftCastle, blackRightCastle);
+    }
+
+    template std::string genFen<true>(const BoardState& state);
+    template std::string genFen<false>(const BoardState& state);
+
+    template <bool whiteToMove>
+    std::string genFen(const BoardState& state) {
+        std::string fen;
+        short count = 0;
+        unsigned char c;
+        Index square;
+        bitboard squareBB;
+        Piece piece;
+        bitboard whitePieces = state.board.getAllPieces<true>();
+        for (Index rank = Chess::RANK_SIZE - 1; rank >= 0; rank--) {
+            for (Index file = 0; file < Chess::RANK_SIZE; file++) {
+                square = rank * Chess::RANK_SIZE + file;
+                squareBB = Constants::SQUARE_BBS[square];
+                if (file == 0 && rank != Chess::RANK_SIZE - 1) {
+                    if (count > 0) {
+                        fen += (char)(count + '0');
+                        count = 0;
+                    }
+                    fen += '/';
+                }
+
+                piece = state.board.getPieceAt(square);
+
+                if (piece == -1) {
+                    count++;
+                }
+                else {
+                    if (count > 0) {
+                        fen += (char)(count + '0');
+                        count = 0;
+                    }
+
+                    // uppercase for white, lowercase for black
+                    c = getCharFromPiece(piece, (whitePieces & squareBB) != 0);
+
+                    fen += c;
+                }
+            }
+        }
+
+        // flush the last count if the final rank ends with empties
+        if (count > 0) {
+            fen += (char)(count + '0');
+        }
+
+        fen += ' ';
+
+        // turn.
+        fen += whiteToMove ? 'w' : 'b';
+
+        fen += ' ';
+
+        // castling rights.
+        if (!state.board.canCastleShort<true>() && !state.board.canCastleLong<true>() &&
+            !state.board.canCastleShort<false>() && !state.board.canCastleLong<false>()) {
+            fen += '-';
+        }
+        else {
+            if (state.board.canCastleShort<true>()) fen += 'K';
+            if (state.board.canCastleLong<true>()) fen += 'Q';
+            if (state.board.canCastleShort<false>()) fen += 'k';
+            if (state.board.canCastleLong<false>()) fen += 'q';
+        }
+
+        fen += ' ';
+
+        // en passant.
+        if (state.board.enPassant == 0) fen += '-';
+        else fen += Square::getNotation(state.board.getEnPassantSquare());
+
+        fen += ' ';
+
+        // halfmoves.
+        fen += std::to_string(state.halfmoves);
+
+        fen += ' ';
+
+        // fullmoves.
+        fen += std::to_string(state.fullmoves);
+
+        return fen;
     }
 }

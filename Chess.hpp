@@ -11,7 +11,7 @@ using bitboard = uint64_t;
 using File = int8_t;
 using Rank = int8_t;
 using Index = int8_t;
-using Piece = uint8_t;
+using Piece = int8_t;
 using Flag = uint8_t;
 
 
@@ -346,13 +346,26 @@ struct Move {
 	inline Move() : from(0), to(0), piece(0), flag(0) {}
 	inline Move(Index from, Index to, Piece piece, Flag flag) : from(from), to(to), piece(piece), flag(flag) {}
 	friend std::ostream& operator<<(std::ostream& os, const Move& m) {
-		os << "piece " << Chess::getPiece(m.piece) << " - from: " << Square::getNotation(m.from) << " to: " << Square::getNotation(m.to) << '\n';
+		os << "piece " << Chess::getPiece(m.piece) << " - from: " << Square::getNotation(m.from) << " to: " << Square::getNotation(m.to); // << '\n';
 
 		return os;
 	}
-
-
+	bool operator==(const Move& other) const noexcept {
+		return from == other.from && to == other.to && piece == other.piece && flag == other.flag;
+	}
 };
+namespace std {
+	template <>
+	struct hash<Move> {
+		size_t operator()(const Move& m) const noexcept {
+			// Simple but effective hash combination
+			return static_cast<size_t>(m.from) |
+				(static_cast<size_t>(m.to) >> 8) |
+				(static_cast<size_t>(m.piece) >> 16) |
+				(static_cast<size_t>(m.flag) >> 24);
+		}
+	};
+}
 
 enum class EndState : uint8_t {
 	ONGOING,

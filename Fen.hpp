@@ -14,7 +14,8 @@ namespace Fen {
     void generateCastlingRights(Board& board, const std::string_view& fenCastlingRights);
 
     // get fen from position.
-    //std::string genFen(const Board& board) { return ""; }
+    template <bool whiteToMove>
+    std::string genFen(const BoardState& state);
 }
 
 #endif

@@ -6,12 +6,14 @@
 
 namespace test {
     static inline std::array<std::array<Move, 218>, 12> movesBuffer;
+    inline std::unordered_map<Move, uint8_t> map;
 
     template<bool whiteToMove>
-    uint64_t countMoves(const BoardState& state, uint8_t depth, Move move) {
+    uint64_t countMoves(const BoardState& state, uint8_t depth) {
         std::array<Move, 218>& moves = movesBuffer[depth];
          uint16_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(state, &moves[0]);
 
+         
          if (depth == 1) {
              return moveCount;
          }
@@ -25,8 +27,10 @@ namespace test {
             Board board = state.board.branch<whiteToMove>(move);
             BoardState state2 = state.branchState<!whiteToMove>(board);
 
-            count += test::countMoves<!whiteToMove>(state2, depth - 1, move);
+            count += test::countMoves<!whiteToMove>(state2, depth - 1);
         }
+
+        
         return count;
     }
 
@@ -36,12 +40,17 @@ namespace test {
 
         auto start = std::chrono::high_resolution_clock::now();
 
-        moves_count = test::countMoves<whiteToMove>(state, depth, Move());
+        moves_count = test::countMoves<whiteToMove>(state, depth);
 
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = end - start;
-        std::cout << static_cast<short>(depth) << ") " << moves_count << " Moves - Function took " << elapsed.count() << " ms";
-        std::cout << " - " << (elapsed.count() / moves_count) << "ms Per Move." << '\n';
+        //std::cout << static_cast<short>(depth) << ") " << moves_count << " Moves - Function took " << elapsed.count() << " ms";
+        //std::cout << " - " << (elapsed.count() / moves_count) << "ms Per Move." << '\n';
+        
+        //for (const auto& [key, value] : map) {
+        //    std::cout << key << " -> " << (int)value << '\n';  // access key only
+        //}
+
         return moves_count;
     }
 }

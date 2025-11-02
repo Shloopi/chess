@@ -222,6 +222,12 @@ public:
 		if (this->getKing<whiteToMove>() == square) return Chess::KING;
 		return -1;
 	}
+	constexpr inline Piece getPieceAt(Index square) const {
+		Piece piece = getPieceAt<true>(square);
+		if (piece == -1) piece = getPieceAt<false>(square);
+
+		return piece;
+	}
 	template <Piece piece, bool whiteToMove>
 	inline void setPiece(Index index) {
 		if constexpr (whiteToMove) {
@@ -318,7 +324,7 @@ public:
 		bitboard enPassantTemp, castlingRightsTemp = this->castlingRights;
 
 		if constexpr (flag == Chess::DOUBLE_PAWN_PUSH) {
-			enPassantTemp = Chess::pawnForward<whiteToMove>(from);
+			enPassantTemp = Chess::pawnsForward<whiteToMove>(from);
 		}
 		else {
 			enPassantTemp = 0;
@@ -625,7 +631,7 @@ public:
 
 		// handle pawn moved 2 squares.
 		if constexpr (flag == Chess::DOUBLE_PAWN_PUSH) {
-			this->enPassant = Chess::pawnForward<whiteToMove>(from);
+			this->enPassant = Chess::pawnsForward<whiteToMove>(from);
 		}
 		else {
 			this->enPassant = 0;

@@ -118,14 +118,13 @@ namespace MoveGen {
 
 		// Pawns that can do pushes.
 		bitboard canSinglePush = pawns & Chess::pawnsBackward<whiteToMove>(empty) & ~state.bishopPins;
-		bitboard canDoublePush = canSinglePush & Chess::pawnsBackward2<whiteToMove>(empty) & Chess::doublePushRank<whiteToMove>() & checkRay;
-        canSinglePush &= checkRay;
+		bitboard canDoublePush = canSinglePush & Chess::pawnsBackward2<whiteToMove>(empty) & Chess::doublePushRank<whiteToMove>();
 
 		// Pawns that can do left captures.
-		bitboard canLeftCapture = pawns & Chess::pawnsRevAttackLeft<whiteToMove>(enemy) & ~state.rookPins & Chess::pawnLeftMask<whiteToMove>() & checkRay;
+		bitboard canLeftCapture = pawns & Chess::pawnsRevAttackLeft<whiteToMove>(enemy) & ~state.rookPins & Chess::pawnLeftMask<whiteToMove>();
         
         // Pawns that can do right captures.
-        bitboard canRightCapture = pawns & Chess::pawnsRevAttackRight<whiteToMove>(enemy) & ~state.rookPins & Chess::pawnRightMask<whiteToMove>() & checkRay;
+        bitboard canRightCapture = pawns & Chess::pawnsRevAttackRight<whiteToMove>(enemy) & ~state.rookPins & Chess::pawnRightMask<whiteToMove>();
 
         // Remove PinnedPawns.
         Index kingSquare = state.board.getKing<whiteToMove>(), pinnedPawn;
