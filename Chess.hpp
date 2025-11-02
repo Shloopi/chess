@@ -132,7 +132,7 @@ namespace Chess {
 			toPrint += "\n";
 		}
 
-		std::cout << toPrint << std::endl;
+		std::cout << toPrint << '\n';
 	}
 	inline std::string showBitboard(bitboard bitboard, Index piece = -1ULL, std::string c = "1") {
 		std::string toPrint = "";
@@ -367,13 +367,6 @@ namespace std {
 	};
 }
 
-enum class EndState : uint8_t {
-	ONGOING,
-	CHECKMATE,
-	STALEMATE,
-	DRAW_BY_INSUFFICIENT_MATERIAL,
-	DRAW_BY_FIFTY_MOVE_RULE,
-	DRAW_BY_THREEFOLD_REPETITION
-};
+
 
 #endif

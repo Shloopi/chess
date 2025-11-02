@@ -10,31 +10,6 @@
 
 class BoardState {
 private:
-	//template <bool whiteToMove>
-	//void checkState() {
-	//	// no possible moves.
-	//	if (MoveGen::hasLegalMoves<whiteToMove>(this)) {
-	//		if (this->inCheck()) {
-	//			this->endState = EndState::CHECKMATE;
-	//		}
-	//		else {
-	//			this->endState = EndState::STALEMATE;
-	//		}
-	//	}
-	//	// check draw.
-	//	else if (this->halfmoves == 50) {
-	//		this->endState = EndState::DRAW_BY_FIFTY_MOVE_RULE;
-	//	}
-	//	//// check insufficient material.
-	//	//else if (board.getFriendlyPieces(PieceType::PAWN) == 0ULL && board.getFriendlyPieces(PieceType::QUEEN) == 0ULL && 
-	//	//        board.getFriendlyPieces(PieceType::ROOK) == 0ULL) {
-	//	//    // TODO: add logic for checking insufficient material
-	//	//    return state;
-	//	//}
-	//	else if (this->threefoldRepetition) {
-	//		this->endState = EndState::DRAW_BY_THREEFOLD_REPETITION;
-	//	}
-	//}
 	template <bool whiteToMove>
 	void calcChecks() {
 		Index kingSquare = this->board.getKing<whiteToMove>();
@@ -55,10 +30,10 @@ private:
 
 		// queen checks.
 		this->checkingPieces |= (PseudoMoveGen::getPseudoQueenMoves(enemyOrEmpty, kingSquare, allPieces) & this->board.getQueens<!whiteToMove>());
-
+		
 		// pawn checks.
-		this->checkingPieces |= (((Chess::pawnsRevAttackLeft<whiteToMove>(king) & Chess::pawnLeftMask<whiteToMove>()) | 
-			(Chess::pawnsRevAttackRight<whiteToMove>(king) & Chess::pawnRightMask<whiteToMove>())) & this->board.getPawns<!whiteToMove>());
+		this->checkingPieces |= (((Chess::pawnsRevAttackLeft<!whiteToMove>(king) & Chess::pawnLeftMask<!whiteToMove>()) |
+			(Chess::pawnsRevAttackRight<!whiteToMove>(king) & Chess::pawnRightMask<!whiteToMove>())) & this->board.getPawns<!whiteToMove>());
 	}
 
 	template <bool whiteToMove>
@@ -110,7 +85,7 @@ private:
 	bitboard processPins(Index kingSquare, bitboard possiblePinningPieces, bitboard kingRayMoves) const {
 		Index square;
 		bitboard betweenPieces, pins = 0ULL;
-		bitboard enemyOrEmpty = board.notFriendlyPieces<whiteToMove>();
+		bitboard enemyOrEmpty = this->board.notFriendlyPieces<whiteToMove>();
 		bitboard allPieces = this->board.getAllPieces();
 		bitboard friendlyPiece = this->board.getAllPieces<whiteToMove>();
 
@@ -134,7 +109,7 @@ public:
 	uint8_t halfmoves;
 	uint8_t fullmoves;
 
-	bitboard stateKey;
+	uint64_t stateKey;
 
 	bitboard checkingPieces;
 
@@ -142,18 +117,16 @@ public:
 	bitboard bishopPins;
 	bool pinnedEnPassant;
 
-	EndState endState;
-	
 	// count the number of repetitions of positions in the game.
-	std::unordered_map<bitboard, char> positionsRep;
+	std::unordered_map<uint64_t, char> positionsRep;
 	bool threefoldRepetition;
 
 	BoardState() :	halfmoves(0), fullmoves(1), stateKey(0), checkingPieces(0), 
-					rookPins(0), bishopPins(0), endState(EndState::ONGOING), 
+					rookPins(0), bishopPins(0), 
 					threefoldRepetition(false), pinnedEnPassant(false) {}
 
 	BoardState(Board board) :	halfmoves(0), fullmoves(1), stateKey(0), checkingPieces(0),
-								rookPins(0), bishopPins(0), endState(EndState::ONGOING), 
+								rookPins(0), bishopPins(0), 
 								threefoldRepetition(false), pinnedEnPassant(false) {
 		this->board = board;
 	}
@@ -210,8 +183,8 @@ public:
 		if ((PseudoMoveGen::getPseudoQueenMoves(enemyOrEmpty, square, pieces) & this->board.getQueens<!whiteToMove>()) != 0) return true;
 
 		// pawn attacks.
-		if ((((Chess::pawnsRevAttackLeft<whiteToMove>(squareBB) & Chess::pawnLeftMask<whiteToMove>()) |
-			(Chess::pawnsRevAttackRight<whiteToMove>(squareBB) & Chess::pawnRightMask<whiteToMove>())) & this->board.getPawns<!whiteToMove>()) != 0) return true;
+		if ((((Chess::pawnsRevAttackLeft<!whiteToMove>(squareBB) & Chess::pawnLeftMask<!whiteToMove>()) |
+			(Chess::pawnsRevAttackRight<!whiteToMove>(squareBB) & Chess::pawnRightMask<!whiteToMove>())) & this->board.getPawns<!whiteToMove>()) != 0) return true;
 
 		return false;
 	}
@@ -234,7 +207,6 @@ public:
 		os << "Rook Pins: \n" << Chess::showBitboard(state.rookPins);
 		os << "Bishop Pins: \n" << Chess::showBitboard(state.bishopPins);
 		os << "Pinned En Passant: " << state.pinnedEnPassant << '\n';
-		os << "End State: " << static_cast<int>(state.endState) << '\n';
 		return os;
 	}
 };

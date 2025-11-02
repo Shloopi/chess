@@ -2,6 +2,7 @@
 #define TEST_GEN_HPP
 
 #include "BoardState.hpp"
+#include "GameResult.hpp"
 #include <chrono>
 
 namespace test {
@@ -10,6 +11,9 @@ namespace test {
 
     template<bool whiteToMove>
     uint64_t countMoves(const BoardState& state, uint8_t depth) {
+        if (GameResult::checkState<whiteToMove>(state) != EndState::ONGOING) {
+            return 0;
+		}
         std::array<Move, 218>& moves = movesBuffer[depth];
          uint16_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(state, &moves[0]);
 
@@ -35,7 +39,7 @@ namespace test {
     }
 
     template <bool whiteToMove>
-    uint64_t timeDepth(BoardState& state, uint8_t depth = 5) {
+    uint64_t timeDepth(BoardState& state, uint8_t depth = 5, bool print = true) {
         uint64_t moves_count;
 
         auto start = std::chrono::high_resolution_clock::now();
@@ -44,8 +48,11 @@ namespace test {
 
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = end - start;
-        //std::cout << static_cast<short>(depth) << ") " << moves_count << " Moves - Function took " << elapsed.count() << " ms";
-        //std::cout << " - " << (elapsed.count() / moves_count) << "ms Per Move." << '\n';
+
+        if (print) {
+            std::cout << static_cast<short>(depth) << ") " << moves_count << " Moves - Function took " << elapsed.count() << " ms";
+            std::cout << " - " << (elapsed.count() / moves_count) << "ms Per Move." << '\n';
+        }
         
         //for (const auto& [key, value] : map) {
         //    std::cout << key << " -> " << (int)value << '\n';  // access key only

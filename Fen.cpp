@@ -54,6 +54,7 @@ namespace Fen {
 
         generatePieces(state.board, splittedFen[0]);
         whiteToMove = splittedFen[1] == "w";
+		state.board.initKey(whiteToMove);
         generateCastlingRights(state.board, splittedFen[2]);
         state.board.enPassant = splittedFen[3] == "-" ? 0 : Constants::SQUARE_BBS[Square::getIndex(splittedFen[3])];
         state.halfmoves = std::stoi(splittedFen[4]);

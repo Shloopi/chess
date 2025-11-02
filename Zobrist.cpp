@@ -27,32 +27,32 @@ namespace Zobrist {
             Zobrist::enPassantFileRandom[i] = Zobrist::genRandomNumber();
         }
     }
-    bitboard Zobrist::genKey(bool whiteToMove) { return Zobrist::turnRandom[whiteToMove]; }
+    uint64_t genKey(bool whiteToMove) { return Zobrist::turnRandom[whiteToMove]; }
 
-    bitboard Zobrist::applyPiece(bitboard key, bool whiteToMove, Piece piece, Index square) {
-        bitboard pieceRandom = Zobrist::piecesRandom[whiteToMove][piece][square];
+    uint64_t applyPiece(uint64_t key, bool whiteToMove, Piece piece, Index square) {
+        uint64_t pieceRandom = Zobrist::piecesRandom[whiteToMove][piece][square];
 
         key ^= pieceRandom;
 
         return key;
     }
 
-    bitboard Zobrist::applyBoard(bitboard key, uint8_t castlingRights, Index enPassantFile) {
+    uint64_t applyBoard(uint64_t key, uint8_t castlingRights, Index enPassantFile) {
         // apply castling rights.
         key ^= Zobrist::castlingRandom[castlingRights];
         key ^= Zobrist::enPassantFileRandom[enPassantFile];
         return key;
     }
 
-    bitboard Zobrist::applyTurn(bitboard key, bool whiteToMove) {
+    uint64_t Zobrist::applyTurn(uint64_t key, bool whiteToMove) {
         return key ^ Zobrist::turnRandom[whiteToMove];
     }
 
-    bitboard Zobrist::genRandomNumber()
+    uint64_t genRandomNumber()
     {
         Zobrist::seed += 0x9E3779B97F4A7C15ULL;
 
-        bitboard rand = Zobrist::seed;
+        uint64_t rand = Zobrist::seed;
         rand = (rand ^ (rand >> 30)) * 0xBF58476D1CE4E5B9ULL;
         rand = (rand ^ (rand >> 27)) * 0x94D049BB133111EBULL;
 
