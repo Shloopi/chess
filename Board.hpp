@@ -8,7 +8,7 @@
 #include <functional>
 #include "Constants.hpp"
 #include "Chess.hpp"
-#include "Zobrist.hpp"
+#include "PseudoMoveGen.hpp"
 
 class Board {
 private:
@@ -40,8 +40,6 @@ public:
 	uint8_t castlingRights {0b1111}; // white left, white right, black left, black right
 	bitboard enPassant { 0 };
 
-	uint64_t boardKey{ 0 };
-
 	Board() = default;
 
 	Board(bitboard wp, bitboard wn, bitboard wb, bitboard wr, bitboard wq, Index wk,
@@ -49,32 +47,29 @@ public:
 		whitePawns(wp), whiteKnights(wn), whiteBishops(wb), whiteRooks(wr), whiteQueens(wq), whiteKing(wk),
 		blackPawns(bp), blackKnights(bn), blackBishops(bb), blackRooks(br), blackQueens(bq), blackKing(bk), castlingRights(castling), enPassant(ep)
 	{}
-	Board(bitboard wp, bitboard wn, bitboard wb, bitboard wr, bitboard wq, Index wk,
-		bitboard bp, bitboard bn, bitboard bb, bitboard br, bitboard bq, Index bk, uint8_t castling, bitboard ep, bool whiteToMove) :
-		whitePawns(wp), whiteKnights(wn), whiteBishops(wb), whiteRooks(wr), whiteQueens(wq), whiteKing(wk),
-		blackPawns(bp), blackKnights(bn), blackBishops(bb), blackRooks(br), blackQueens(bq), blackKing(bk), castlingRights(castling), enPassant(ep)
-	{
-		//this->initKey(whiteToMove);
-	}
 
-	void initKey(bool whiteToMove) {
-		uint64_t key = Zobrist::genKey(whiteToMove);
-		// pieces.
-		for (int square = 0; square < Chess::BOARD_SIZE; square++) {
-			Piece piece = this->getPieceAt(square);
-			if (piece != -1) {
-				bool whiteToMove = (this->whitePawns & Constants::SQUARE_BBS[square]) != 0 ||
-					(this->whiteKnights & Constants::SQUARE_BBS[square]) != 0 ||
-					(this->whiteBishops & Constants::SQUARE_BBS[square]) != 0 ||
-					(this->whiteRooks & Constants::SQUARE_BBS[square]) != 0 ||
-					(this->whiteQueens & Constants::SQUARE_BBS[square]) != 0 ||
-					(this->whiteKing == square);
-				key = Zobrist::applyPiece(key, whiteToMove, piece, square);
-			}
-		}
-		// board state.
-		key = Zobrist::applyBoard(key, this->castlingRights, this->getEnPassantFile());
-		this->boardKey = key;
+	template <bool whiteToMove>
+	bool isSquareAttacked(Index square, bitboard pieces) const {
+		bitboard enemyOrEmpty = this->notFriendlyPieces<whiteToMove>();
+		bitboard squareBB = Constants::SQUARE_BBS[square];
+
+		// knight attacks.
+		if ((Constants::KNIGHT_MOVES[square] & this->getKnights<!whiteToMove>()) != 0) return true;
+
+		// bishop attacks.
+		if ((PseudoMoveGen::getPseudoBishopMoves(enemyOrEmpty, square, pieces) & this->getBishops<!whiteToMove>()) != 0) return true;
+
+		// rook attacks.
+		if ((PseudoMoveGen::getPseudoRookMoves(enemyOrEmpty, square, pieces) & this->getRooks<!whiteToMove>()) != 0) return true;
+
+		// queen attacks.
+		if ((PseudoMoveGen::getPseudoQueenMoves(enemyOrEmpty, square, pieces) & this->getQueens<!whiteToMove>()) != 0) return true;
+
+		// pawn attacks.
+		if ((((Chess::pawnsRevAttackLeft<!whiteToMove>(squareBB) & Chess::pawnLeftMask<!whiteToMove>()) |
+			(Chess::pawnsRevAttackRight<!whiteToMove>(squareBB) & Chess::pawnRightMask<!whiteToMove>())) & this->getPawns<!whiteToMove>()) != 0) return true;
+
+		return false;
 	}
 
 	friend std::ostream& operator<<(std::ostream& os, const Board& board) {
@@ -107,7 +102,6 @@ public:
 		os << "En Passant:\n";
 		os << Chess::showBitboard(board.enPassant);
 		os << "Castling Rights: " << (int)board.castlingRights << '\n';
-		os << "Board Key: " << board.boardKey << '\n';
 		return os << '\n' << '\n';
 	}
 
@@ -168,14 +162,10 @@ public:
 
 	template <bool whiteToMove>
 	constexpr inline bitboard getKnights() const {
-		if constexpr (whiteToMove) {
-			return this->whiteKnights;
-		}
-		else {
-			return this->blackKnights;
-		}
+		if constexpr (whiteToMove) return this->whiteKnights;
+		else return this->blackKnights;
 	}
-
+		
 	template <bool whiteToMove>
 	constexpr inline bitboard getBishops() const {
 		if constexpr (whiteToMove) {
@@ -354,7 +344,8 @@ public:
 		bitboard change = from | to;
 		bitboard notFrom = ~from;
 		bitboard notTo = ~to;
-		bitboard enPassantTemp, castlingRightsTemp = this->castlingRights;
+		bitboard enPassantTemp;
+		uint8_t castlingRightsTemp = this->castlingRights;
 
 		if constexpr (flag == Chess::DOUBLE_PAWN_PUSH) {
 			enPassantTemp = Chess::pawnsForward<whiteToMove>(from);
@@ -414,48 +405,48 @@ public:
 			if constexpr (whiteToMove) {
 				return Board(this->whitePawns & notFrom, this->whiteKnights, this->whiteBishops | to, this->whiteRooks,
 					this->whiteQueens, this->whiteKing, this->blackPawns & notTo, this->blackKnights & notTo,
-					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 			else {
 				return Board(this->whitePawns & notTo, this->whiteKnights & notTo, this->whiteBishops & notTo, this->whiteRooks & notTo,
 					this->whiteQueens & notTo, this->whiteKing, this->blackPawns & notFrom, this->blackKnights,
-					this->blackBishops | to, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops | to, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 		}
 		else if constexpr (flag == Chess::ROOK_PROMOTION) {
 			if constexpr (whiteToMove) {
 				return Board(this->whitePawns & notFrom, this->whiteKnights, this->whiteBishops, this->whiteRooks | to,
 					this->whiteQueens, this->whiteKing, this->blackPawns & notTo, this->blackKnights & notTo,
-					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 			else {
 				return Board(this->whitePawns & notTo, this->whiteKnights & notTo, this->whiteBishops & notTo, this->whiteRooks & notTo,
 					this->whiteQueens & notTo, this->whiteKing, this->blackPawns & notFrom, this->blackKnights,
-					this->blackBishops, this->blackRooks | to, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops, this->blackRooks | to, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 		}
 		else if constexpr (flag == Chess::QUEEN_PROMOTION) {
 			if constexpr (whiteToMove) {
 				return Board(this->whitePawns & notFrom, this->whiteKnights, this->whiteBishops, this->whiteRooks,
 					this->whiteQueens | to, this->whiteKing, this->blackPawns & notTo, this->blackKnights & notTo,
-					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 			else {
 				return Board(this->whitePawns & notTo, this->whiteKnights & notTo, this->whiteBishops & notTo, this->whiteRooks & notTo,
 					this->whiteQueens & notTo, this->whiteKing, this->blackPawns & notFrom, this->blackKnights,
-					this->blackBishops, this->blackRooks, this->blackQueens | to, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops, this->blackRooks, this->blackQueens | to, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 		}
 		else if constexpr (flag == Chess::KNIGHT_PROMOTION) {
 			if constexpr (whiteToMove) {
 				return Board(this->whitePawns & notFrom, this->whiteKnights | to, this->whiteBishops, this->whiteRooks,
 					this->whiteQueens, this->whiteKing, this->blackPawns & notTo, this->blackKnights & notTo,
-					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 			else {
 				return Board(this->whitePawns & notTo, this->whiteKnights & notTo, this->whiteBishops & notTo, this->whiteRooks & notTo,
 					this->whiteQueens & notTo, this->whiteKing, this->blackPawns & notFrom, this->blackKnights | to,
-					this->blackBishops, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 		}
 
@@ -465,13 +456,13 @@ public:
 				return Board(this->whitePawns, this->whiteKnights, this->whiteBishops,
 					this->whiteRooks ^ this->getRookShortCastlingMove<whiteToMove>(),
 					this->whiteQueens, Chess::lsb(to), this->blackPawns, this->blackKnights,
-					this->blackBishops, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 			else {
 				return Board(this->whitePawns, this->whiteKnights, this->whiteBishops, this->whiteRooks,
 					this->whiteQueens, this->whiteKing, this->blackPawns, this->blackKnights,
 					this->blackBishops, this->blackRooks ^ this->getRookShortCastlingMove<whiteToMove>(),
-					this->blackQueens, Chess::lsb(to), castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackQueens, Chess::lsb(to), castlingRightsTemp, enPassantTemp);
 			}
 		}
 		else if constexpr (flag == Chess::LONG_CASTLING) {
@@ -479,13 +470,13 @@ public:
 				return Board(this->whitePawns, this->whiteKnights, this->whiteBishops,
 					this->whiteRooks ^ this->getRookLongCastlingMove<whiteToMove>(),
 					this->whiteQueens, Chess::lsb(to), this->blackPawns, this->blackKnights,
-					this->blackBishops, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 			else {
 				return Board(this->whitePawns, this->whiteKnights, this->whiteBishops, this->whiteRooks,
 					this->whiteQueens, this->whiteKing, this->blackPawns, this->blackKnights,
 					this->blackBishops, this->blackRooks ^ this->getRookLongCastlingMove<whiteToMove>(),
-					this->blackQueens, Chess::lsb(to), castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackQueens, Chess::lsb(to), castlingRightsTemp, enPassantTemp);
 			}
 		}
 
@@ -498,43 +489,43 @@ public:
 			if constexpr (whiteToMove) {
 				return Board(this->whitePawns ^ change, this->whiteKnights, this->whiteBishops,
 					this->whiteRooks, this->whiteQueens, this->whiteKing, this->blackPawns & notTo & enPassantMask, this->blackKnights & notTo,
-					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 			else {
 				return Board(this->whitePawns & notTo & enPassantMask, this->whiteKnights & notTo, this->whiteBishops & notTo,
 					this->whiteRooks & notTo, this->whiteQueens & notTo, this->whiteKing, this->blackPawns ^ change, this->blackKnights,
-					this->blackBishops, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 		}
 		else if constexpr (piece == Chess::KNIGHT) {
 			if constexpr (whiteToMove) {
 				return Board(this->whitePawns, this->whiteKnights ^ change, this->whiteBishops,
 					this->whiteRooks, this->whiteQueens, this->whiteKing, this->blackPawns & notTo, this->blackKnights & notTo,
-					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 			else {
 				return Board(this->whitePawns & notTo, this->whiteKnights & notTo, this->whiteBishops & notTo,
 					this->whiteRooks & notTo, this->whiteQueens & notTo, this->whiteKing, this->blackPawns, this->blackKnights ^ change,
-					this->blackBishops, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 		}
 		else if constexpr (piece == Chess::BISHOP) {
 			if constexpr (whiteToMove) {
 				return Board(this->whitePawns, this->whiteKnights, this->whiteBishops ^ change,
 					this->whiteRooks, this->whiteQueens, this->whiteKing, this->blackPawns & notTo, this->blackKnights & notTo,
-					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 			else {
 				return Board(this->whitePawns & notTo, this->whiteKnights & notTo, this->whiteBishops & notTo,
 					this->whiteRooks & notTo, this->whiteQueens & notTo, this->whiteKing, this->blackPawns, this->blackKnights,
-					this->blackBishops ^ change, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops ^ change, this->blackRooks, this->blackQueens, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 		}
 		else if constexpr (piece == Chess::ROOK) {
 			if constexpr (whiteToMove) {
 				return Board(this->whitePawns, this->whiteKnights, this->whiteBishops,
 					this->whiteRooks ^ change, this->whiteQueens, this->whiteKing, this->blackPawns & notTo, this->blackKnights & notTo,
-					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 			else {
 				return Board(this->whitePawns & notTo, this->whiteKnights & notTo, this->whiteBishops & notTo,
@@ -546,24 +537,24 @@ public:
 			if constexpr (whiteToMove) {
 				return Board(this->whitePawns, this->whiteKnights, this->whiteBishops,
 					this->whiteRooks, this->whiteQueens ^ change, this->whiteKing, this->blackPawns & notTo, this->blackKnights & notTo,
-					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 			else {
 				return Board(this->whitePawns & notTo, this->whiteKnights & notTo, this->whiteBishops & notTo,
 					this->whiteRooks & notTo, this->whiteQueens & notTo, this->whiteKing, this->blackPawns, this->blackKnights,
-					this->blackBishops, this->blackRooks, this->blackQueens ^ change, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops, this->blackRooks, this->blackQueens ^ change, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 		}
 		else if constexpr (piece == Chess::KING) {
 			if constexpr (whiteToMove) {
 				return Board(this->whitePawns, this->whiteKnights, this->whiteBishops,
 					this->whiteRooks, this->whiteQueens, Chess::lsb(to), this->blackPawns & notTo, this->blackKnights & notTo,
-					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops & notTo, this->blackRooks & notTo, this->blackQueens & notTo, this->blackKing, castlingRightsTemp, enPassantTemp);
 			}
 			else {
 				return Board(this->whitePawns & notTo, this->whiteKnights & notTo, this->whiteBishops & notTo,
 					this->whiteRooks & notTo, this->whiteQueens & notTo, this->whiteKing, this->blackPawns, this->blackKnights,
-					this->blackBishops, this->blackRooks, this->blackQueens, Chess::lsb(to), castlingRightsTemp, enPassantTemp, !whiteToMove);
+					this->blackBishops, this->blackRooks, this->blackQueens, Chess::lsb(to), castlingRightsTemp, enPassantTemp);
 			}
 		}
 	}
@@ -651,6 +642,7 @@ public:
 				}
 			}
 		}
+		return *this;
 	}
 
 	template <bool whiteToMove, Piece piece, Flag flag = Chess::QUIET>
@@ -865,8 +857,6 @@ public:
 				this->blackKing = Chess::lsb(to);
 			}
 		}
-
-		this->initKey(!whiteToMove);
 	}
 
 	template <bool whiteToMove>
@@ -911,6 +901,7 @@ public:
 						return;
 					}
 				}
+				return;
 			}
 			case Chess::KNIGHT:
 			{
@@ -941,6 +932,7 @@ public:
 						return;
 					}
 				}
+				return;
 			}
 			case Chess::QUEEN:
 			{
@@ -977,6 +969,23 @@ public:
 		else {
 			this->makeMove<false>(move);
 		}
+	}
+
+	template <bool isWhite>
+	inline bool hasInsufficientMaterial() {
+		if (this->getPawns<isWhite>() == 0 && this->getQueens<isWhite>() == 0 &&
+			this->getRooks<isWhite>() == 0) {
+			bitboard bishopsAndKnights = this->getBishops<isWhite>() & this->getKnights<isWhite>();
+			Index bitsNum = Chess::numOfBits(bishopsAndKnights);
+			if (bitsNum < 2) {
+				return true;
+			}
+			else if (bitsNum == 2 && bishopsAndKnights == this->getKnights<isWhite>()) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 };
 

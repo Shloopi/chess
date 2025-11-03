@@ -8,16 +8,14 @@
 #include <array>
 
 template <bool whiteToMove>
-void getFens(BoardState& state) {
+void getFens(Game& game) {
 	std::array<Move, 218> moves;
-	uint8_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(state, &moves[0]);
+	uint8_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(game, &moves[0]);
 	std::cout << '{';
 	for (int i = 0; i < moveCount; i++) {
-		const Move move = moves[i];
-		Board board = state.board.branch<whiteToMove>(move);
-		BoardState state2 = state.branchState<!whiteToMove>(board);
+		game.makeMove<whiteToMove>(moves[i]);
 		
-		std::string a = Fen::genFen<!whiteToMove>(state2);
+		std::string a = Fen::genFen<!whiteToMove>(game);
 		std::cout << '"' << a << '"';
 		if (i + 1 < moveCount) std::cout << ", ";
 	}
@@ -25,22 +23,23 @@ void getFens(BoardState& state) {
 }
 
 template <bool whiteToMove>
-void getMovesDepth(BoardState& state, int depth) {
+void getMovesDepth(Game& game, int depth) {
 	std::array<Move, 218> moves;
-	uint8_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(state, &moves[0]);
+	uint8_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(game, &moves[0]);
 	
 	for (int i = 0; i < moveCount; i++) {
 		const Move move = moves[i];
-		Board board = state.board.branch<whiteToMove>(move);
-		BoardState state2 = state.branchState<!whiteToMove>(board);
-		std::cout << move << " - " << test::timeDepth<!whiteToMove>(state2, depth, false) << '\n';
+		GameSnapshot snapshot = game.createSnapshot();
+		game.makeMove<whiteToMove>(move);
+		std::cout << move << " - " << test::timeDepth<!whiteToMove>(game, depth, false) << '\n';
+		game.undoMove<whiteToMove>(snapshot);
 	}
 }
 
 template <bool whiteToMove>
-void getMoves(BoardState& state) {
+void getMoves(Game& game) {
 	std::array<Move, 218> moves;
-	uint8_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(state, &moves[0]);
+	uint8_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(game, &moves[0]);
 
 	std::cout << "Moves: " << (int)moveCount << '\n';
 
@@ -51,43 +50,40 @@ void getMoves(BoardState& state) {
 }
 
 template <bool whiteToMove>
-void timeDepth2(BoardState& state, int from, int to) {
+void timeDepth2(Game& game, int from, int to) {
 	for (uint8_t i = from; i <= to; i++) {
-		test::timeDepth<whiteToMove>(state, i);
+		test::timeDepth<whiteToMove>(game, i);
 	}
 }
 
 template <bool whiteToMove>
-BoardState makeMove(BoardState& state, Index startSquare, Index targetSquare) {
+void makeMove(Game& game, Index startSquare, Index targetSquare) {
 	std::array<Move, 218> moves;
-	uint8_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(state, &moves[0]);
-	BoardState state2 = state;
+	uint8_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(game, &moves[0]);
+
 	for (int i = 0; i < moveCount; i++) {
 		const Move move = moves[i];
 
 		if (move.from == startSquare && move.to == targetSquare) {
 			std::cout << "making move - " << move << '\n';
-			Board board = state.board.branch<whiteToMove>(move);
-			state2 = state.branchState<!whiteToMove>(board);
+			game.makeMove<whiteToMove>(move);
 		}
 	}
-
-	return state2;
 }
 
 int main() {
 	Zobrist::init();
 	MoveGen::init();
-	BoardState state;
-	//Fen::handleFen("rnb1kbnr/pp1ppppp/2p5/q7/8/3P4/PPPNPPPP/R1BQKBNR w KQkq - 0 1", state);
-	Fen::handleFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", state);
+	Game game;
+	//Fen::handleFen("rnb1kbnr/pp1ppppp/2p5/q7/8/3P4/PPPNPPPP/R1BQKBNR w KQkq - 0 1", game);
+	Fen::handleFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", game);
 	const bool whiteToMove = true;
-	state.init<whiteToMove>();
+	game.init<whiteToMove>();
 
-	getFens<whiteToMove>(state);
-	//getMovesDepth<whiteToMove>(state, 6);
-	//getMoves<whiteToMove>(state);
-	//timeDepth2<whiteToMove>(state, 1, 7);
+	//getFens<whiteToMove>(game);
+	//getMovesDepth<whiteToMove>(game, 6);
+	//getMoves<whiteToMove>(game);
+	timeDepth2<whiteToMove>(game, 7, 7);
 
 
 }

@@ -14,7 +14,7 @@ namespace MagicGen {
 	inline std::array<std::vector<bitboard>, Chess::BOARD_SIZE> bishopMagicTable;
 	inline std::array<std::vector<bitboard>, Chess::BOARD_SIZE> rookMagicTable;
 
-	inline int genMagicIndex(bitboard bb, bitboard magicNumber, Index shifter) { return (bb * magicNumber) >> shifter; }
+	inline uint64_t genMagicIndex(bitboard bb, bitboard magicNumber, Index shifter) { return (bb * magicNumber) >> shifter; }
 	void genOccupancies(std::vector<bitboard>& occupancies, bitboard moves);
 	bitboard genSlidingAttack(bool forBishop, Square sourceSquare, bitboard occupancy);
 	void genMagicTable(bool forBishop);

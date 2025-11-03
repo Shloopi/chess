@@ -114,7 +114,7 @@ namespace Chess {
 	}
 
 	// ------------- Bit Operations -------------
-	inline void printBitboard(bitboard bitboard, Index piece = -1ULL, std::string c = "1") {
+	inline void printBitboard(bitboard bitboard, Index piece = -1, std::string c = "1") {
 		std::string toPrint = "";
 
 		for (int rank = Chess::RANK_SIZE - 1; rank >= 0; rank--) {
@@ -134,7 +134,7 @@ namespace Chess {
 
 		std::cout << toPrint << '\n';
 	}
-	inline std::string showBitboard(bitboard bitboard, Index piece = -1ULL, std::string c = "1") {
+	inline std::string showBitboard(bitboard bitboard, Index piece = -1, std::string c = "1") {
 		std::string toPrint = "";
 
 		for (int rank = Chess::RANK_SIZE - 1; rank >= 0; rank--) {
@@ -343,15 +343,18 @@ struct Move {
 	Index from, to;
 	Piece piece;
 	Flag flag;
-	inline Move() : from(0), to(0), piece(0), flag(0) {}
-	inline Move(Index from, Index to, Piece piece, Flag flag) : from(from), to(to), piece(piece), flag(flag) {}
+	bool isCapture;
+
+	inline Move() : from(0), to(0), piece(0), flag(0), isCapture(false) {}
+	inline Move(Index from, Index to, Piece piece, Flag flag, bool isCapture = false) : from(from), to(to), piece(piece), flag(flag), isCapture(isCapture) {}
+
 	friend std::ostream& operator<<(std::ostream& os, const Move& m) {
 		os << "piece " << Chess::getPiece(m.piece) << " - from: " << Square::getNotation(m.from) << " to: " << Square::getNotation(m.to); // << '\n';
 
 		return os;
 	}
 	bool operator==(const Move& other) const noexcept {
-		return from == other.from && to == other.to && piece == other.piece && flag == other.flag;
+		return from == other.from && to == other.to && piece == other.piece && flag == other.flag && isCapture == other.isCapture;
 	}
 };
 namespace std {

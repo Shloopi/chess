@@ -3,19 +3,19 @@
 
 #include <string>
 #include <string_view>
-#include "BoardState.hpp"
+#include "Game.hpp"
 #include "Board.hpp"
 
 namespace Fen {
 
     // generate from fen (all 6 parts of the fen).
-    bool handleFen(const std::string& fen, BoardState& state);
+    bool handleFen(const std::string& fen, Game& game);
     void generatePieces(Board& board, const std::string& fenPieces);
     void generateCastlingRights(Board& board, const std::string_view& fenCastlingRights);
 
     // get fen from position.
     template <bool whiteToMove>
-    std::string genFen(const BoardState& state);
+    std::string genFen(const Game& game);
 }
 
 #endif

@@ -1,37 +1,36 @@
 #ifndef TEST_GEN_HPP
 #define TEST_GEN_HPP
 
-#include "BoardState.hpp"
-#include "GameResult.hpp"
+#include "Game.hpp"
 #include <chrono>
+#include "MoveGen.hpp"
 
 namespace test {
     static inline std::array<std::array<Move, 218>, 12> movesBuffer;
     inline std::unordered_map<Move, uint8_t> map;
 
     template<bool whiteToMove>
-    uint64_t countMoves(const BoardState& state, uint8_t depth) {
-        if (GameResult::checkState<whiteToMove>(state) != EndState::ONGOING) {
+    uint64_t countMoves(Game& game, uint8_t depth) {
+        if (game.gameState != GameState::ONGOING) {
             return 0;
 		}
-        std::array<Move, 218>& moves = movesBuffer[depth];
-         uint16_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(state, &moves[0]);
 
+        std::array<Move, 218>& moves = movesBuffer[depth];
+        uint8_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(game, &moves[0]);
          
-         if (depth == 1) {
-             return moveCount;
-         }
+        if (depth == 1) {
+            return moveCount;
+        }
         
         uint64_t count = 0;
 
         for (uint8_t i = 0; i < moveCount; i++) {
             const Move move = moves[i];
 
-
-            Board board = state.board.branch<whiteToMove>(move);
-            BoardState state2 = state.branchState<!whiteToMove>(board);
-
-            count += test::countMoves<!whiteToMove>(state2, depth - 1);
+			GameSnapshot snapshot = game.createSnapshot();
+			game.makeMove<whiteToMove>(move);
+            count += test::countMoves<!whiteToMove>(game, depth - 1);
+			game.undoMove<whiteToMove>(snapshot);
         }
 
         
@@ -39,12 +38,12 @@ namespace test {
     }
 
     template <bool whiteToMove>
-    uint64_t timeDepth(BoardState& state, uint8_t depth = 5, bool print = true) {
+    uint64_t timeDepth(Game& game, uint8_t depth = 5, bool print = true) {
         uint64_t moves_count;
 
         auto start = std::chrono::high_resolution_clock::now();
 
-        moves_count = test::countMoves<whiteToMove>(state, depth);
+        moves_count = test::countMoves<whiteToMove>(game, depth);
 
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = end - start;

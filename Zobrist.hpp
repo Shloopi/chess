@@ -3,6 +3,7 @@
 
 #include <random>
 #include "Chess.hpp"
+#include "Board.hpp"
 #include <array>
 
 namespace Zobrist {
@@ -12,15 +13,11 @@ namespace Zobrist {
     inline std::array<uint64_t, 9> enPassantFileRandom;
     inline uint64_t seed = 0x5523FEDC480CE0AF;
 
+	template <bool whiteToMove>
+    inline uint64_t hash(const Board& board);
+
     void init();
-    uint64_t genKey(bool whiteToMove);
-
-    uint64_t applyPiece(uint64_t key, bool whiteToMove, Piece piece, Index square);
-    uint64_t applyTurn(uint64_t key, bool whiteToMove);
-    uint64_t applyBoard(uint64_t key, uint8_t castlingRights, Index enPassantFile);
-
-
-    bitboard genRandomNumber();
+    uint64_t genRandomNumber();
 
 
 

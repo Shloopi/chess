@@ -44,7 +44,7 @@ static char getCharFromPiece(Piece piece, bool isWhite) {
 }
 
 namespace Fen {
-    bool handleFen(const std::string& fen, BoardState& state) {
+    bool handleFen(const std::string& fen, Game& game) {
         bool whiteToMove;
 
         std::vector<std::string> splittedFen;
@@ -52,13 +52,12 @@ namespace Fen {
 
         if (splittedFen.size() != 6) throw std::invalid_argument("Fen::Fen - fen does not contains all variables - " + fen);
 
-        generatePieces(state.board, splittedFen[0]);
+        generatePieces(game.board, splittedFen[0]);
         whiteToMove = splittedFen[1] == "w";
-		state.board.initKey(whiteToMove);
-        generateCastlingRights(state.board, splittedFen[2]);
-        state.board.enPassant = splittedFen[3] == "-" ? 0 : Constants::SQUARE_BBS[Square::getIndex(splittedFen[3])];
-        state.halfmoves = std::stoi(splittedFen[4]);
-        state.fullmoves = std::stoi(splittedFen[5]);
+        generateCastlingRights(game.board, splittedFen[2]);
+        game.board.enPassant = splittedFen[3] == "-" ? 0 : Constants::SQUARE_BBS[Square::getIndex(splittedFen[3])];
+        game.halfmoves = std::stoi(splittedFen[4]);
+        game.fullmoves = std::stoi(splittedFen[5]);
 
         return whiteToMove;
     }
@@ -125,18 +124,18 @@ namespace Fen {
 		board.setCastlingRights(whiteLeftCastle, whiteRightCastle, blackLeftCastle, blackRightCastle);
     }
 
-    template std::string genFen<true>(const BoardState& state);
-    template std::string genFen<false>(const BoardState& state);
+    template std::string genFen<true>(const Game& game);
+    template std::string genFen<false>(const Game& game);
 
     template <bool whiteToMove>
-    std::string genFen(const BoardState& state) {
+    std::string genFen(const Game& game) {
         std::string fen;
         short count = 0;
         unsigned char c;
         Index square;
         bitboard squareBB;
         Piece piece;
-        bitboard whitePieces = state.board.getAllPieces<true>();
+        bitboard whitePieces = game.board.getAllPieces<true>();
         for (Index rank = Chess::RANK_SIZE - 1; rank >= 0; rank--) {
             for (Index file = 0; file < Chess::RANK_SIZE; file++) {
                 square = rank * Chess::RANK_SIZE + file;
@@ -149,7 +148,7 @@ namespace Fen {
                     fen += '/';
                 }
 
-                piece = state.board.getPieceAt(square);
+                piece = game.board.getPieceAt(square);
 
                 if (piece == -1) {
                     count++;
@@ -181,32 +180,32 @@ namespace Fen {
         fen += ' ';
 
         // castling rights.
-        if (!state.board.canCastleShort<true>() && !state.board.canCastleLong<true>() &&
-            !state.board.canCastleShort<false>() && !state.board.canCastleLong<false>()) {
+        if (!game.board.canCastleShort<true>() && !game.board.canCastleLong<true>() &&
+            !game.board.canCastleShort<false>() && !game.board.canCastleLong<false>()) {
             fen += '-';
         }
         else {
-            if (state.board.canCastleShort<true>()) fen += 'K';
-            if (state.board.canCastleLong<true>()) fen += 'Q';
-            if (state.board.canCastleShort<false>()) fen += 'k';
-            if (state.board.canCastleLong<false>()) fen += 'q';
+            if (game.board.canCastleShort<true>()) fen += 'K';
+            if (game.board.canCastleLong<true>()) fen += 'Q';
+            if (game.board.canCastleShort<false>()) fen += 'k';
+            if (game.board.canCastleLong<false>()) fen += 'q';
         }
 
         fen += ' ';
 
         // en passant.
-        if (state.board.enPassant == 0) fen += '-';
-        else fen += Square::getNotation(state.board.getEnPassantSquare());
+        if (game.board.enPassant == 0) fen += '-';
+        else fen += Square::getNotation(game.board.getEnPassantSquare());
 
         fen += ' ';
 
         // halfmoves.
-        fen += std::to_string(state.halfmoves);
+        fen += std::to_string(game.halfmoves);
 
         fen += ' ';
 
         // fullmoves.
-        fen += std::to_string(state.fullmoves);
+        fen += std::to_string(game.fullmoves);
 
         return fen;
     }

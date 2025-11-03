@@ -27,26 +27,6 @@ namespace Zobrist {
             Zobrist::enPassantFileRandom[i] = Zobrist::genRandomNumber();
         }
     }
-    uint64_t genKey(bool whiteToMove) { return Zobrist::turnRandom[whiteToMove]; }
-
-    uint64_t applyPiece(uint64_t key, bool whiteToMove, Piece piece, Index square) {
-        uint64_t pieceRandom = Zobrist::piecesRandom[whiteToMove][piece][square];
-
-        key ^= pieceRandom;
-
-        return key;
-    }
-
-    uint64_t applyBoard(uint64_t key, uint8_t castlingRights, Index enPassantFile) {
-        // apply castling rights.
-        key ^= Zobrist::castlingRandom[castlingRights];
-        key ^= Zobrist::enPassantFileRandom[enPassantFile];
-        return key;
-    }
-
-    uint64_t Zobrist::applyTurn(uint64_t key, bool whiteToMove) {
-        return key ^ Zobrist::turnRandom[whiteToMove];
-    }
 
     uint64_t genRandomNumber()
     {
@@ -57,6 +37,59 @@ namespace Zobrist {
         rand = (rand ^ (rand >> 27)) * 0x94D049BB133111EBULL;
 
         return rand ^ (rand >> 31);
+    }
+
+    template uint64_t hash<true>(const Board& board);
+    template uint64_t hash<false>(const Board& board);
+
+    template <bool whiteToMove>
+    uint64_t hash(const Board& board) {
+        uint64_t hashKey = Zobrist::turnRandom[whiteToMove];
+
+        hashKey ^= Zobrist::castlingRandom[board.castlingRights];
+        hashKey ^= Zobrist::enPassantFileRandom[board.getEnPassantFile()];
+
+        for (int i = 0; i < Chess::BOARD_SIZE; i++) {
+            // White Pieces.
+            if (Constants::SQUARE_BBS[i] & board.whitePawns) {
+                hashKey ^= Zobrist::piecesRandom[true][Chess::PAWN][i];
+            }
+            else if (Constants::SQUARE_BBS[i] & board.whiteKnights) {
+                hashKey ^= Zobrist::piecesRandom[true][Chess::KNIGHT][i];
+            }
+            else if (Constants::SQUARE_BBS[i] & board.whiteBishops) {
+                hashKey ^= Zobrist::piecesRandom[true][Chess::BISHOP][i];
+            }
+            else if (Constants::SQUARE_BBS[i] & board.whiteRooks) {
+                hashKey ^= Zobrist::piecesRandom[true][Chess::ROOK][i];
+            }
+            else if (Constants::SQUARE_BBS[i] & board.whiteQueens) {
+                hashKey ^= Zobrist::piecesRandom[true][Chess::QUEEN][i];
+            }
+            else if (i == board.whiteKing) {
+                hashKey ^= Zobrist::piecesRandom[true][Chess::KING][i];
+            }
+            // Black Pieces.
+            else if (Constants::SQUARE_BBS[i] & board.blackPawns) {
+                hashKey ^= Zobrist::piecesRandom[false][Chess::PAWN][i];
+            }
+            else if (Constants::SQUARE_BBS[i] & board.blackKnights) {
+                hashKey ^= Zobrist::piecesRandom[false][Chess::KNIGHT][i];
+            }
+            else if (Constants::SQUARE_BBS[i] & board.blackBishops) {
+                hashKey ^= Zobrist::piecesRandom[false][Chess::BISHOP][i];
+            }
+            else if (Constants::SQUARE_BBS[i] & board.blackRooks) {
+                hashKey ^= Zobrist::piecesRandom[false][Chess::ROOK][i];
+            }
+            else if (Constants::SQUARE_BBS[i] & board.blackQueens) {
+                hashKey ^= Zobrist::piecesRandom[false][Chess::QUEEN][i];
+            }
+            else if (i == board.blackKing) {
+                hashKey ^= Zobrist::piecesRandom[false][Chess::KING][i];
+            }
+        }
+        return hashKey;
     }
 }
 
