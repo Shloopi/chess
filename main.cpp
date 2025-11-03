@@ -84,10 +84,10 @@ int main() {
 	const bool whiteToMove = true;
 	state.init<whiteToMove>();
 
-	//getFens<whiteToMove>(state);
-	//getMovesDepth<whiteToMove>(state, 1);
+	getFens<whiteToMove>(state);
+	//getMovesDepth<whiteToMove>(state, 6);
 	//getMoves<whiteToMove>(state);
-	timeDepth2<whiteToMove>(state, 1, 8);
+	//timeDepth2<whiteToMove>(state, 1, 7);
 
 
 }
