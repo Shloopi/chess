@@ -594,6 +594,7 @@ public:
 						return this->branch<whiteToMove, Chess::PAWN, Chess::QUEEN_PROMOTION>(Constants::SQUARE_BBS[move.from], Constants::SQUARE_BBS[move.to]);
 					}
 				}
+				return *this;
 			}
 			case Chess::KNIGHT:
 			{

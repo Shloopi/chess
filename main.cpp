@@ -83,7 +83,7 @@ int main() {
 	//getFens<whiteToMove>(game);
 	//getMovesDepth<whiteToMove>(game, 6);
 	//getMoves<whiteToMove>(game);
-	timeDepth2<whiteToMove>(game, 7, 7);
+	timeDepth2<whiteToMove>(game, 1, 7);
 
 
 }

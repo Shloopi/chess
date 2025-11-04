@@ -45,44 +45,47 @@ namespace Zobrist {
     template <bool whiteToMove>
     uint64_t hash(const Board& board) {
         uint64_t hashKey = Zobrist::turnRandom[whiteToMove];
+        bitboard iterBB;
 
         hashKey ^= Zobrist::castlingRandom[board.castlingRights];
         hashKey ^= Zobrist::enPassantFileRandom[board.getEnPassantFile()];
 
         for (int i = 0; i < Chess::BOARD_SIZE; i++) {
+			iterBB = Constants::SQUARE_BBS[i];
+
             // White Pieces.
-            if (Constants::SQUARE_BBS[i] & board.whitePawns) {
+            if (iterBB & board.whitePawns) {
                 hashKey ^= Zobrist::piecesRandom[true][Chess::PAWN][i];
             }
-            else if (Constants::SQUARE_BBS[i] & board.whiteKnights) {
+            else if (iterBB & board.whiteKnights) {
                 hashKey ^= Zobrist::piecesRandom[true][Chess::KNIGHT][i];
             }
-            else if (Constants::SQUARE_BBS[i] & board.whiteBishops) {
+            else if (iterBB & board.whiteBishops) {
                 hashKey ^= Zobrist::piecesRandom[true][Chess::BISHOP][i];
             }
-            else if (Constants::SQUARE_BBS[i] & board.whiteRooks) {
+            else if (iterBB & board.whiteRooks) {
                 hashKey ^= Zobrist::piecesRandom[true][Chess::ROOK][i];
             }
-            else if (Constants::SQUARE_BBS[i] & board.whiteQueens) {
+            else if (iterBB & board.whiteQueens) {
                 hashKey ^= Zobrist::piecesRandom[true][Chess::QUEEN][i];
             }
             else if (i == board.whiteKing) {
                 hashKey ^= Zobrist::piecesRandom[true][Chess::KING][i];
             }
             // Black Pieces.
-            else if (Constants::SQUARE_BBS[i] & board.blackPawns) {
+            else if (iterBB & board.blackPawns) {
                 hashKey ^= Zobrist::piecesRandom[false][Chess::PAWN][i];
             }
-            else if (Constants::SQUARE_BBS[i] & board.blackKnights) {
+            else if (iterBB & board.blackKnights) {
                 hashKey ^= Zobrist::piecesRandom[false][Chess::KNIGHT][i];
             }
-            else if (Constants::SQUARE_BBS[i] & board.blackBishops) {
+            else if (iterBB & board.blackBishops) {
                 hashKey ^= Zobrist::piecesRandom[false][Chess::BISHOP][i];
             }
-            else if (Constants::SQUARE_BBS[i] & board.blackRooks) {
+            else if (iterBB & board.blackRooks) {
                 hashKey ^= Zobrist::piecesRandom[false][Chess::ROOK][i];
             }
-            else if (Constants::SQUARE_BBS[i] & board.blackQueens) {
+            else if (iterBB & board.blackQueens) {
                 hashKey ^= Zobrist::piecesRandom[false][Chess::QUEEN][i];
             }
             else if (i == board.blackKing) {
