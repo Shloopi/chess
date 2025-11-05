@@ -43,54 +43,6 @@ class Game {
 private:
 	RepetitionTable2 table;
 
-
-public:
-	Board board;
-	BoardState state;
-	uint8_t halfmoves;
-	uint8_t fullmoves;
-	uint64_t boardHash;
-	GameState gameState;
-
-	template <bool whiteToMove>
-	void makeMove(const Move& move) {
-		if (move.isCapture || move.piece == Chess::PAWN) {
-			this->halfmoves = 0;
-			this->table.eraseTable();
-		}
-		else this->halfmoves++;
-
-		if constexpr (!whiteToMove) this->fullmoves++;
-
-		this->board = this->board.branch<whiteToMove>(move);
-		this->init<!whiteToMove>();
-	}
-
-	template <bool whiteToMove>
-	void undoMove(const GameSnapshot& snapshot) {
-		table.remove(this->boardHash);
-
-		this->board = *snapshot.boardPtr;
-		this->fullmoves = snapshot.fullmoves;
-		this->halfmoves = snapshot.halfmoves;
-		this->boardHash = snapshot.boardHash;
-		this->gameState = snapshot.gameState;
-
-		this->state.init<whiteToMove>(this->board);
-	}
-
-	template <bool whiteToMove>
-	void init() {
-		this->boardHash = Zobrist::hash<whiteToMove>(this->board);
-		table.store(this->boardHash);
-		this->state.init<whiteToMove>(this->board);
-		this->checkState<whiteToMove>();
-	}
-
-	GameSnapshot createSnapshot() const {
-		return GameSnapshot(this->halfmoves, this->fullmoves, this->board, this->boardHash, this->gameState);
-	}
-
 	template <bool whiteToMove>
 	void checkState() {
 		this->gameState = GameState::ONGOING;
@@ -115,6 +67,65 @@ public:
 		else if (this->table.isThreefoldRepetition(this->boardHash)) {
 			this->gameState = GameState::DRAW_BY_THREEFOLD_REPETITION;
 		}
+	}
+public:
+	Board board;
+	BoardState state;
+	uint8_t halfmoves;
+	uint8_t fullmoves;
+	uint64_t boardHash;
+	GameState gameState;
+
+	template <bool whiteToMove, bool perft = false>
+	void makeMove(const Move& move) {
+		if (move.isCapture || move.piece == Chess::PAWN) {
+			this->halfmoves = 0;
+			if constexpr (!perft) this->table.eraseTable();
+		}
+		else this->halfmoves++;
+
+		if constexpr (!whiteToMove) this->fullmoves++;
+
+		this->board = this->board.branch<whiteToMove>(move);
+		this->init<!whiteToMove, perft>();
+	}
+
+	template <bool whiteToMove>
+	void undoMove(const GameSnapshot& snapshot) {
+		table.remove(this->boardHash);
+
+		this->board = *snapshot.boardPtr;
+		this->fullmoves = snapshot.fullmoves;
+		this->halfmoves = snapshot.halfmoves;
+		this->boardHash = snapshot.boardHash;
+		this->gameState = snapshot.gameState;
+
+		this->state.init<whiteToMove>(this->board);
+	}
+
+	template <bool whiteToMove, bool perft = false>
+	void init() {
+		this->state.init<whiteToMove>(this->board);
+
+		if constexpr (!perft) {
+			this->boardHash = Zobrist::hash<whiteToMove>(this->board);
+			table.store(this->boardHash);
+			this->checkState<whiteToMove>();
+		}
+	}
+
+	GameSnapshot createSnapshot() const {
+		return GameSnapshot(this->halfmoves, this->fullmoves, this->board, this->boardHash, this->gameState);
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const Game& game) {
+		os << "Game State: " << (int)game.gameState << '\n';
+		os << "Halfmoves: " << (int)game.halfmoves << '\n';
+		os << "Fullmoves: " << (int)game.fullmoves << '\n';
+		os << "Board Hash: " << std::hex << game.boardHash << std::dec << '\n';
+		os << "Board:\n" << game.board;
+		os << "Board State:\n" << game.state;
+		return os;
 	}
 
 };

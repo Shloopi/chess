@@ -62,16 +62,18 @@ private:
 		this->pinnedEnPassant = false;
 
 		if (board.enPassant != 0 && (Constants::SQUARE_BBS[kingSquare] & Chess::enPassantRank<whiteToMove>()) != 0) {
-			rookMoves &= Chess::enPassantRank<whiteToMove>();
+			rookMoves = PseudoMoveGen::getPseudoRookMoves(Chess::enPassantRank<whiteToMove>(), kingSquare, allPieces);
 			possiblePinningRooks &= Chess::enPassantRank<whiteToMove>();
 			bitboard capturedPawn = Chess::pawnsBackward<whiteToMove>(board.enPassant);
 			bitboard capturingPawn = Chess::pawnsRevAttackLeft<whiteToMove>(board.enPassant) & board.getPawns<whiteToMove>();
+
 			if (capturingPawn == 0) capturingPawn = Chess::pawnsRevAttackRight<whiteToMove>(board.enPassant) & board.getPawns<whiteToMove>();
 			
 			if ((rookMoves & capturingPawn) != 0 || (rookMoves & capturedPawn) != 0) {
 				while (possiblePinningRooks != 0) {
 					Index square = Chess::popLSB(possiblePinningRooks);
-					bitboard pinningPieceMoves = PseudoMoveGen::getPseudoRookMoves(enemyOrEmpty, square, allPieces) & Chess::enPassantRank<whiteToMove>();
+					bitboard pinningPieceMoves = PseudoMoveGen::getPseudoRookMoves(Chess::enPassantRank<whiteToMove>(), square, allPieces);
+					
 					if ((pinningPieceMoves & capturingPawn) != 0 || (pinningPieceMoves & capturedPawn) != 0) {
 						this->pinnedEnPassant = true;
 						break;

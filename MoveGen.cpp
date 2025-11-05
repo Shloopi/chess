@@ -115,7 +115,10 @@ namespace MoveGen {
     template<bool whiteToMove, bool countOnly>
     void genPawnMoves(const Game& game, Move* moves, uint8_t& moveCount) {
 		bitboard pawns = game.board.getPawns<whiteToMove>();
-		bitboard enemy = game.board.getEnemyPieces<whiteToMove>() | game.board.enPassant;
+
+		bitboard enemy = game.board.getEnemyPieces<whiteToMove>();
+		if (!game.state.pinnedEnPassant) enemy |= game.board.enPassant;
+
 		bitboard empty = game.board.getFreeSquares();
 		Index enPassant = game.board.getEnPassantSquare();
         bitboard checkRay = game.state.inCheck() ? game.state.checkingPieces | Constants::BETWEEN_PIECES_TABLE[game.board.getKing<whiteToMove>()][Chess::lsb(game.state.checkingPieces)] : Chess::MAX_BITBOARD;
@@ -168,16 +171,6 @@ namespace MoveGen {
             }
         }
 
-        // Handle En Passant.
-        bitboard leftEnPassant = 0, rightEnPassant = 0;
-        if (game.board.enPassant != 0 && !game.state.pinnedEnPassant) {
-            leftEnPassant = canLeftCapture & game.board.enPassant;
-            canLeftCapture ^= leftEnPassant;
-
-            rightEnPassant = canRightCapture & game.board.enPassant;
-            canRightCapture ^= rightEnPassant;
-        }
-
         // Seperate Promotions.
 		bitboard promoSinglePush = canSinglePush & Chess::promotionRank<whiteToMove>();
 		bitboard promoLeftCapture = canLeftCapture & Chess::promotionRank<whiteToMove>();
@@ -190,7 +183,6 @@ namespace MoveGen {
         if constexpr (countOnly) {
             moveCount += Chess::numOfBits(canSinglePush) + Chess::numOfBits(canDoublePush) +
                 Chess::numOfBits(canLeftCapture) + Chess::numOfBits(canRightCapture) +
-                Chess::numOfBits(leftEnPassant) + Chess::numOfBits(rightEnPassant) +
                 4 * (Chess::numOfBits(promoSinglePush) + Chess::numOfBits(promoLeftCapture) +
                     Chess::numOfBits(promoRightCapture));
             return;
@@ -306,20 +298,36 @@ namespace MoveGen {
                     *out++ = Move(kingSquare, targetSquare, Chess::KING, Chess::REMOVE_ALL_CASTLING, Constants::SQUARE_BBS[targetSquare] & enemyPieces);
                 }
             }
+            else {
+				moveBitboard &= ~Constants::SQUARE_BBS[targetSquare];
+            }
         }
 
         // check for kingside castling.
         targetCastlingSquare = kingSquare + 2;
-        if (!game.state.inCheck() && game.board.canCastleShort<whiteToMove>() && (moveBitboard & (1ULL << (kingSquare + 1))) != 0 && (pieces & (1ULL << targetCastlingSquare)) == 0 && (pieces & (1ULL << (kingSquare + 1))) == 0 && !game.board.isSquareAttacked<whiteToMove>(targetCastlingSquare, game.board.getAllPieces())) {
-            if constexpr (countOnly) moveCount++;
-            else *out++ = Move(kingSquare, targetCastlingSquare, Chess::KING, Chess::SHORT_CASTLING);
+        if (!game.state.inCheck() && 
+            game.board.canCastleShort<whiteToMove>() && 
+            (moveBitboard & Constants::SQUARE_BBS[kingSquare + 1]) != 0 &&
+            (pieces & Constants::SQUARE_BBS[targetCastlingSquare]) == 0 && 
+            (pieces & Constants::SQUARE_BBS[kingSquare + 1]) == 0 && 
+            !game.board.isSquareAttacked<whiteToMove>(targetCastlingSquare, pieces)) {
+            
+                if constexpr (countOnly) moveCount++;
+                else *out++ = Move(kingSquare, targetCastlingSquare, Chess::KING, Chess::SHORT_CASTLING);
         }
 
         // check for queenside castling.
         targetCastlingSquare = kingSquare - 2;
-        if (!game.state.inCheck() && game.board.canCastleLong<whiteToMove>() && (moveBitboard & (1ULL << (kingSquare - 1))) != 0 && (pieces & (1ULL << targetCastlingSquare)) == 0 && (pieces & (1ULL << (kingSquare - 1))) == 0 && !game.board.isSquareAttacked<whiteToMove>(targetCastlingSquare, game.board.getAllPieces())) {
-            if constexpr (countOnly) moveCount++;
-            else *out++ = Move(kingSquare, targetCastlingSquare, Chess::KING, Chess::LONG_CASTLING);
+        if (!game.state.inCheck() && 
+            game.board.canCastleLong<whiteToMove>() && 
+            (moveBitboard & Constants::SQUARE_BBS[kingSquare - 1]) != 0 &&
+            (pieces & Constants::SQUARE_BBS[targetCastlingSquare]) == 0 && 
+            (pieces & Constants::SQUARE_BBS[targetCastlingSquare - 1]) == 0 && 
+            (pieces & Constants::SQUARE_BBS[kingSquare - 1]) == 0 && 
+            !game.board.isSquareAttacked<whiteToMove>(targetCastlingSquare, pieces)) {
+            
+                if constexpr (countOnly) moveCount++;
+                else *out++ = Move(kingSquare, targetCastlingSquare, Chess::KING, Chess::LONG_CASTLING);
         }
 
         if constexpr (!countOnly) moveCount = out - moves;

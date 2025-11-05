@@ -28,7 +28,7 @@ namespace test {
             const Move move = moves[i];
 
 			GameSnapshot snapshot = game.createSnapshot();
-			game.makeMove<whiteToMove>(move);
+			game.makeMove<whiteToMove, true>(move);
             count += test::countMoves<!whiteToMove>(game, depth - 1);
 			game.undoMove<whiteToMove>(snapshot);
         }
@@ -49,8 +49,17 @@ namespace test {
         std::chrono::duration<double, std::milli> elapsed = end - start;
 
         if (print) {
-            std::cout << static_cast<short>(depth) << ") " << moves_count << " Moves - Function took " << elapsed.count() << " ms";
-            std::cout << " - " << (elapsed.count() / moves_count) << "ms Per Move." << '\n';
+            if (elapsed.count() > 600'000) {
+                std::cout << static_cast<short>(depth) << ") " << moves_count << " Moves - Function took " << (elapsed.count() / 60'000) << " Minutes";
+            }
+            else if (elapsed.count() > 10'000) {
+                std::cout << static_cast<short>(depth) << ") " << moves_count << " Moves - Function took " << (elapsed.count() / 1'000) << " Seconds";
+            }
+            else {
+                std::cout << static_cast<short>(depth) << ") " << moves_count << " Moves - Function took " << elapsed.count() << " Milli Seconds";
+            }
+            std::cout << " - " << (1000 * elapsed.count() / moves_count) << " Micro Seconds Per Move." << '\n';
+
         }
         
         //for (const auto& [key, value] : map) {

@@ -9,6 +9,7 @@
 #include "Constants.hpp"
 #include "Chess.hpp"
 #include "PseudoMoveGen.hpp"
+#include <bitset>
 
 class Board {
 private:
@@ -25,7 +26,7 @@ private:
 	static constexpr bitboard whiteQueensideRook = 0b1;
 	static constexpr bitboard whiteKingsideRook = 0b10000000;
 	static constexpr bitboard blackQueensideRook = whiteQueensideRook << 56;
-	static constexpr bitboard blackKingsideRook = whiteQueensideRook << 56;
+	static constexpr bitboard blackKingsideRook = whiteKingsideRook << 56;
 
 	static constexpr bitboard whiteRookShortCastle = 0b100000;
 	static constexpr bitboard whiteRookLongCastle = 0b1000;
@@ -65,6 +66,9 @@ public:
 		// queen attacks.
 		if ((PseudoMoveGen::getPseudoQueenMoves(enemyOrEmpty, square, pieces) & this->getQueens<!whiteToMove>()) != 0) return true;
 
+		// King attacks.
+		if (Constants::KING_MOVES[square] & Constants::SQUARE_BBS[this->getKing<!whiteToMove>()]) return true;
+		
 		// pawn attacks.
 		if ((((Chess::pawnsRevAttackLeft<!whiteToMove>(squareBB) & Chess::pawnLeftMask<!whiteToMove>()) |
 			(Chess::pawnsRevAttackRight<!whiteToMove>(squareBB) & Chess::pawnRightMask<!whiteToMove>())) & this->getPawns<!whiteToMove>()) != 0) return true;
@@ -99,10 +103,10 @@ public:
 			os << '\n';
 		}
 
-		os << "En Passant:\n";
-		os << Chess::showBitboard(board.enPassant);
-		os << "Castling Rights: " << (int)board.castlingRights << '\n';
-		return os << '\n' << '\n';
+		os << "En Passant: ";
+		os << Square::getNotation(Chess::lsb(board.enPassant)) << '\n';
+		os << "Castling Rights: " << std::bitset<4>(board.castlingRights) << "\n\n";
+		return os;
 	}
 
 	template <bool whiteToMove>
@@ -383,7 +387,7 @@ public:
 			// checking if capturing enemy rooks affect enemy castling rights.
 			bitboard capture = to & Board::startingRooks<!whiteToMove>();
 			if (capture == Board::startingQueensideRook<!whiteToMove>()) {
-				if constexpr (whiteToMove) {
+				if constexpr (!whiteToMove) {
 					castlingRightsTemp &= ~whiteLongCastleMask;
 				}
 				else {
@@ -391,7 +395,7 @@ public:
 				}
 			}
 			else if (capture == Board::startingKingsideRook<!whiteToMove>()) {
-				if constexpr (whiteToMove) {
+				if constexpr (!whiteToMove) {
 					castlingRightsTemp &= ~whiteShortCastleMask;
 				}
 				else {
@@ -976,13 +980,34 @@ public:
 	inline bool hasInsufficientMaterial() {
 		if (this->getPawns<isWhite>() == 0 && this->getQueens<isWhite>() == 0 &&
 			this->getRooks<isWhite>() == 0) {
-			bitboard bishopsAndKnights = this->getBishops<isWhite>() & this->getKnights<isWhite>();
+			bitboard bishopsAndKnights = this->getBishops<isWhite>() | this->getKnights<isWhite>();
 			Index bitsNum = Chess::numOfBits(bishopsAndKnights);
 			if (bitsNum < 2) {
 				return true;
 			}
-			else if (bitsNum == 2 && bishopsAndKnights == this->getKnights<isWhite>()) {
-				return true;
+			else if (bitsNum == 2) {
+				if (bishopsAndKnights == this->getKnights<isWhite>()) return true;
+				if (bishopsAndKnights == this->getBishops<isWhite>()) {
+					Index firstBishopSquare = Chess::popLSB(bishopsAndKnights);
+					Index secondBishopSquare = Chess::popLSB(bishopsAndKnights);
+					if ((Chess::fileOf(firstBishopSquare) + Chess::rankOf(firstBishopSquare)) % 2 ==
+						(Chess::fileOf(secondBishopSquare) + Chess::rankOf(secondBishopSquare)) % 2) {
+						return true;
+					}
+				}
+			}
+			else {
+				if (bishopsAndKnights == this->getBishops<isWhite>()) {
+					Index firstBishopSquare = Chess::popLSB(bishopsAndKnights);
+					bool color = (Chess::fileOf(firstBishopSquare) + Chess::rankOf(firstBishopSquare)) % 2;
+					while (bishopsAndKnights) {
+						Index bishopSquare = Chess::popLSB(bishopsAndKnights);
+						if ((Chess::fileOf(bishopSquare) + Chess::rankOf(bishopSquare)) % 2 != color) {
+							return false;
+						}
+					}
+					return true;
+				}
 			}
 		}
 

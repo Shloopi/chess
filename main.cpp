@@ -13,11 +13,13 @@ void getFens(Game& game) {
 	uint8_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(game, &moves[0]);
 	std::cout << '{';
 	for (int i = 0; i < moveCount; i++) {
+		GameSnapshot snapshot = game.createSnapshot();
 		game.makeMove<whiteToMove>(moves[i]);
 		
 		std::string a = Fen::genFen<!whiteToMove>(game);
 		std::cout << '"' << a << '"';
 		if (i + 1 < moveCount) std::cout << ", ";
+		game.undoMove<whiteToMove>(snapshot);
 	}
 	std::cout << '}';
 }
@@ -30,7 +32,7 @@ void getMovesDepth(Game& game, int depth) {
 	for (int i = 0; i < moveCount; i++) {
 		const Move move = moves[i];
 		GameSnapshot snapshot = game.createSnapshot();
-		game.makeMove<whiteToMove>(move);
+		game.makeMove<whiteToMove, true>(move);
 		std::cout << move << " - " << test::timeDepth<!whiteToMove>(game, depth, false) << '\n';
 		game.undoMove<whiteToMove>(snapshot);
 	}
@@ -57,7 +59,7 @@ void timeDepth2(Game& game, int from, int to) {
 }
 
 template <bool whiteToMove>
-void makeMove(Game& game, Index startSquare, Index targetSquare) {
+bool makeMove(Game& game, Index startSquare, Index targetSquare) {
 	std::array<Move, 218> moves;
 	uint8_t moveCount = MoveGen::genAllLegalMoves<whiteToMove>(game, &moves[0]);
 
@@ -67,23 +69,27 @@ void makeMove(Game& game, Index startSquare, Index targetSquare) {
 		if (move.from == startSquare && move.to == targetSquare) {
 			std::cout << "making move - " << move << '\n';
 			game.makeMove<whiteToMove>(move);
+			return true;
 		}
 	}
+
+	return false;
 }
 
 int main() {
 	Zobrist::init();
 	MoveGen::init();
 	Game game;
-	//Fen::handleFen("rnb1kbnr/pp1ppppp/2p5/q7/8/3P4/PPPNPPPP/R1BQKBNR w KQkq - 0 1", game);
+	//Fen::handleFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", game);
 	Fen::handleFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", game);
 	const bool whiteToMove = true;
-	game.init<whiteToMove>();
+	game.init<whiteToMove, true>();
 
 	//getFens<whiteToMove>(game);
-	//getMovesDepth<whiteToMove>(game, 6);
+	//getMovesDepth<whiteToMove>(game, 1);
 	//getMoves<whiteToMove>(game);
-	timeDepth2<whiteToMove>(game, 1, 7);
-
+	//makeMove<whiteToMove>(game, Square::getIndex("g7"), Square::getIndex("a1"));
+	timeDepth2<whiteToMove>(game, 1, 8);
+	//std::cout << game;
 
 }
