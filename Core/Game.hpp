@@ -3,10 +3,10 @@
 
 
 #include <cstdint>
-#include "Table.hpp"
+#include "../Utils/Table.hpp"
 #include "Board.hpp"
 #include "BoardState.hpp"
-#include "Zobrist.hpp"
+#include "../Utils/Zobrist.hpp"
 #include "MoveGen.hpp"
 
 enum class GameState : uint8_t {
@@ -75,6 +75,8 @@ public:
 	uint8_t fullmoves;
 	uint64_t boardHash;
 	GameState gameState;
+
+	Game() : gameState(GameState::ONGOING), halfmoves(0), fullmoves(1) {}
 
 	template <bool whiteToMove, bool perft = false>
 	void makeMove(const Move& move) {

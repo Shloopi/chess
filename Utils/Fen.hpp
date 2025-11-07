@@ -3,8 +3,8 @@
 
 #include <string>
 #include <string_view>
-#include "Game.hpp"
-#include "Board.hpp"
+#include "../Core/Game.hpp"
+#include "../Core/Board.hpp"
 
 namespace Fen {
 

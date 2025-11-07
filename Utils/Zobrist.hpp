@@ -2,8 +2,8 @@
 #define ZOBRIST_HPP
 
 #include <random>
-#include "Chess.hpp"
-#include "Board.hpp"
+#include "../Core/Chess.hpp"
+#include "../Core/Board.hpp"
 #include <array>
 
 namespace Zobrist {

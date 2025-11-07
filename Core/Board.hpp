@@ -38,8 +38,8 @@ public:
 	bitboard blackPawns{ 0 }, blackKnights{ 0 }, blackBishops{ 0 }, blackRooks{ 0 }, blackQueens{ 0 };
 	Index whiteKing{ 0 }, blackKing{ 0 };
 
-	uint8_t castlingRights {0b1111}; // white left, white right, black left, black right
-	bitboard enPassant { 0 };
+	uint8_t castlingRights{ 0b1111 }; // white left, white right, black left, black right
+	bitboard enPassant{ 0 };
 
 	Board() = default;
 
@@ -47,7 +47,8 @@ public:
 		bitboard bp, bitboard bn, bitboard bb, bitboard br, bitboard bq, Index bk, uint8_t castling, bitboard ep) :
 		whitePawns(wp), whiteKnights(wn), whiteBishops(wb), whiteRooks(wr), whiteQueens(wq), whiteKing(wk),
 		blackPawns(bp), blackKnights(bn), blackBishops(bb), blackRooks(br), blackQueens(bq), blackKing(bk), castlingRights(castling), enPassant(ep)
-	{}
+	{
+	}
 
 	template <bool whiteToMove>
 	bool isSquareAttacked(Index square, bitboard pieces) const {
@@ -68,7 +69,7 @@ public:
 
 		// King attacks.
 		if (Constants::KING_MOVES[square] & Constants::SQUARE_BBS[this->getKing<!whiteToMove>()]) return true;
-		
+
 		// pawn attacks.
 		if ((((Chess::pawnsRevAttackLeft<!whiteToMove>(squareBB) & Chess::pawnLeftMask<!whiteToMove>()) |
 			(Chess::pawnsRevAttackRight<!whiteToMove>(squareBB) & Chess::pawnRightMask<!whiteToMove>())) & this->getPawns<!whiteToMove>()) != 0) return true;
@@ -97,7 +98,7 @@ public:
 				else {
 					c = '_';
 				}
-				
+
 				os << c << ' ';
 			}
 			os << '\n';
@@ -124,7 +125,7 @@ public:
 		}
 	}
 
-	template <bool whiteToMove> 
+	template <bool whiteToMove>
 	static constexpr inline bitboard startingKingsideRook() {
 		if constexpr (whiteToMove) {
 			return Board::whiteKingsideRook;
