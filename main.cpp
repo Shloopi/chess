@@ -6,6 +6,8 @@
 #include "Utils\Zobrist.hpp"
 #include "Utils\Fen.hpp"
 #include <array>
+#include "GUI/sdl2.hpp"
+#include "GUI/gui.hpp"
 
 bool init(Game& game) {
 	Zobrist::init();
@@ -17,19 +19,26 @@ bool init(Game& game) {
 	return color;
 }
 int main() {
-	Game game;
-	bool color = init(game);
+	//Game game;
+	//bool color = init(game);
 
-	if (color) {
-		//Test::showAfterMoveFens<true>(game);
-		//Test::perftPerMove<true>(game, 1);
-		//Test::makeMove<true>(game, Square::getIndex("g7"), Square::getIndex("a1"));
-		Test::loopedTimedPerft<true>(game, 1, 7);
+	//if (color) {
+	//	//Test::showAfterMoveFens<true>(game);
+	//	//Test::perftPerMove<true>(game, 1);
+	//	//Test::makeMove<true>(game, Square::getIndex("g7"), Square::getIndex("a1"));
+	//	Test::loopedTimedPerft<true>(game, 1, 7);
+	//}
+	//else {
+	//	//Test::showAfterMoveFens<false>(game);
+	//	//Test::perftPerMove<false>(game, 1);
+	//	//Test::makeMove<false>(game, Square::getIndex("g7"), Square::getIndex("a1"));
+	//	Test::loopedTimedPerft<false>(game, 1, 7);
+	//}
+
+	GUI::App app;
+	if (!GUI::initApp(app, "Chess Engine", GUI::WIDTH, GUI::HEIGHT)) {
+		return -1;
 	}
-	else {
-		//Test::showAfterMoveFens<false>(game);
-		//Test::perftPerMove<false>(game, 1);
-		//Test::makeMove<false>(game, Square::getIndex("g7"), Square::getIndex("a1"));
-		Test::loopedTimedPerft<false>(game, 1, 7);
-	}
+
+	GUI::mainLoop(app);
 }
