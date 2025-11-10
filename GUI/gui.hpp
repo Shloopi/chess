@@ -5,18 +5,35 @@
 #include "../Core/Chess.hpp"
 #include "sdl2.hpp"
 #include <unordered_map>
+#include "../Core/MoveGen.hpp"
+#include "const.hpp"
+#include "intermediate.hpp"
+#include "../Core/Game.hpp"
 
-namespace GUI {
-	constexpr int TILE_SIZE = 100;
-	constexpr int WIDTH = TILE_SIZE * Chess::RANK_SIZE;
-	constexpr int HEIGHT = TILE_SIZE * Chess::RANK_SIZE;
-	const std::string ASSETS_PATH = "assets/";
+struct ClickedPiece {
+	char piece;
+	std::unique_ptr<SDL_Rect> clickedSquare;
 
-	std::unordered_map<std::string, SDL_Texture*> pieces;
+	ClickedPiece() : piece('.'), clickedSquare(nullptr) {}
+	inline bool isClicked() const {
+		return this->clickedSquare != nullptr;
+	}
+};
+class GuiApp {
+private:
+	std::unordered_map<char, SDL_Texture*> pieces;
+	GUI::App app;
+	ClickedPiece clickedPiece;
 
 	void init();
-	void drawChessBoard(SDL_Renderer* renderer);
-	void mainLoop(App& app);
+	void drawChessBoard();
+	void drawPieces(const GUI::GUIBoard& board);
+	void drawSquareHighlight();
+	void squaredPressed(const GUI::GUIBoard& board, int mouseX, int mouseY);
+	void getSquareFromMouse(const GUI::GUIBoard& board, int mouseX, int mouseY);
+public:
+	GuiApp();
+	void mainLoop(Game& game);
 
 };
 

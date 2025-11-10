@@ -46,7 +46,7 @@ namespace MoveGen {
     template uint8_t genAllLegalMoves<true>(const Game& game, Move* moves);
     template uint8_t genAllLegalMoves<false>(const Game& game, Move* moves);
 
-	template <bool whiteToMove>
+    template <bool whiteToMove>
     uint8_t genAllLegalMoves(const Game& game, Move* moves) {
         uint8_t moveCount = 0;
 

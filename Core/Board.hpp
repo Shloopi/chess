@@ -234,6 +234,11 @@ public:
 		return ~this->getAllPieces();
 	}
 
+	constexpr inline bool isWhitePieceAt(Index square) const {
+		bitboard squareBB = Constants::SQUARE_BBS[square];
+		return (this->getAllPieces<true>() & Constants::SQUARE_BBS[square]) != 0;
+	}
+
 	template <bool whiteToMove>
 	constexpr inline bitboard notFriendlyPieces() const {
 		return ~this->getAllPieces<whiteToMove>();
@@ -253,6 +258,16 @@ public:
 	constexpr inline Piece getPieceAt(Index square) const {
 		Piece piece = getPieceAt<true>(square);
 		if (piece == -1) piece = getPieceAt<false>(square);
+
+		return piece;
+	}
+	constexpr inline Piece getPieceAt(Index square, bool& color) const {
+		Piece piece = getPieceAt<true>(square);
+		if (piece == -1) {
+			piece = getPieceAt<false>(square);
+			color = false;
+		}
+		else color = true;
 
 		return piece;
 	}

@@ -17,9 +17,9 @@ using Flag = uint8_t;
 
 
 namespace Chess {
-	constexpr uint64_t BOARD_SIZE = 64;
-	constexpr uint64_t RANK_SIZE = 8;
-	constexpr uint64_t FILE_SIZE = 8;
+	constexpr uint8_t BOARD_SIZE = 64;
+	constexpr uint8_t RANK_SIZE = 8;
+	constexpr uint8_t FILE_SIZE = 8;
 
 	// ------------- Pieces -------------
 	constexpr Piece PAWN = 0;
@@ -28,8 +28,9 @@ namespace Chess {
 	constexpr Piece ROOK = 3;
 	constexpr Piece QUEEN = 4;
 	constexpr Piece KING = 5;
+	constexpr Piece NO_PIECE = -1;
 
-	static std::string getPiece(Piece piece) {
+	static std::string showPiece(Piece piece) {
 		if (piece == PAWN) return "PAWN";
 		if (piece == KNIGHT) return "KNIGHT";
 		if (piece == BISHOP) return "BISHOP";
@@ -86,6 +87,10 @@ namespace Chess {
 
 	// ------------- Bitboards -------------
 	constexpr bitboard MAX_BITBOARD = 0xFFFFFFFFFFFFFFFFULL;
+
+	static constexpr Index toIndex(Index rank, Index file) {
+		return rank * RANK_SIZE + file;
+	}
 
 	static constexpr Index rankOf(Index square) {
 		return square / RANK_SIZE;
@@ -349,7 +354,7 @@ struct Move {
 	inline Move(Index from, Index to, Piece piece, Flag flag, bool isCapture = false) : from(from), to(to), piece(piece), flag(flag), isCapture(isCapture) {}
 
 	friend std::ostream& operator<<(std::ostream& os, const Move& m) {
-		os << "piece " << Chess::getPiece(m.piece) << " - from: " << Square::getNotation(m.from) << " to: " << Square::getNotation(m.to); // << '\n';
+		os << "piece " << Chess::showPiece(m.piece) << " - from: " << Square::getNotation(m.from) << " to: " << Square::getNotation(m.to); // << '\n';
 
 		return os;
 	}

@@ -4,6 +4,7 @@
 #include <memory>
 #include <SDL2/SDL.h>
 #include <SDL_image.h>
+#include <string>
 
 namespace GUI {
 	struct App {
