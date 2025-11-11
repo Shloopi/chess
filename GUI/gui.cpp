@@ -1,4 +1,5 @@
 #include "gui.hpp"
+#include "../Core/MoveGen.hpp"
 
 void GuiApp::init() {
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
@@ -36,33 +37,53 @@ GuiApp::GuiApp() {
 	this->clickedPiece;
 	this->init();
 }
-void GuiApp::mainLoop(Game& game) {
+void GuiApp::mainLoop(Game& game, bool whiteToMove) {
     GUI::GUIBoard board;
-
+	std::array<Move, 218> moves;
     bool quit = false;
+	bool changed = true;
     SDL_Event e;
+    uint8_t moveCount = 0;
     while (!quit) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 quit = true;
             }
             else if (e.type == SDL_MOUSEBUTTONDOWN) {
-				getSquareFromMouse(board, e.button.x, e.button.y);
+				changed = true;
+                int mouseX, mouseY;
+                SDL_GetMouseState(&mouseX, &mouseY);
+				this->handlePress(game, whiteToMove, moveCount, moves.data(), board, mouseX, mouseY);
+
+
+                if (game.gameState != GameState::ONGOING) {
+                    std::cout << "Game Over! State: " << static_cast<int>(game.gameState) << '\n';
+                    quit = true;
+                }
             }
         }
 
         SDL_SetRenderDrawColor(app.renderer, 0, 0, 0, 255);
         SDL_RenderClear(app.renderer);
 
-        // TODO: draw chess board here
-		drawChessBoard();
-		GUI::convertBoard(game.board, board);
-        drawPieces(board);
-        drawSquareHighlight();
+        if (changed) {
+            if (whiteToMove) {
+                moveCount = MoveGen::genAllLegalMoves<true>(game, moves.data());
+            }
+            else {
+                moveCount = MoveGen::genAllLegalMoves<false>(game, moves.data());
+            }
 
+            changed = false;
+            drawChessBoard();
+            GUI::convertBoard(game.board, board);
+            drawPieces(board);
+            drawSquareHighlight();
+			this->showMoves(moveCount, moves.data(), board);
+            SDL_RenderPresent(app.renderer);
 
-        SDL_RenderPresent(app.renderer);
-        SDL_Delay(100);
+        }
+        SDL_Delay(16);
     }
 
     SDL_DestroyRenderer(app.renderer);
@@ -79,11 +100,10 @@ void GuiApp::drawPieces(const GUI::GUIBoard& board) {
             if (piece != '.') {
                 if (this->pieces.contains(piece)) {
                     SDL_Rect targetSquare = { x * GUI::TILE_SIZE, y * GUI::TILE_SIZE, GUI::TILE_SIZE, GUI::TILE_SIZE };
-                    SDL_RenderCopy(app.renderer, pieces.at(piece), nullptr, &targetSquare);
+                    SDL_RenderCopy(app.renderer, this->pieces.at(piece), nullptr, &targetSquare);
                 }
             }
         }
-        std::cout << '\n';
     }
 }
 void GuiApp::drawSquareHighlight() {
@@ -91,15 +111,15 @@ void GuiApp::drawSquareHighlight() {
         SDL_SetRenderDrawColor(app.renderer, 255, 0, 0, 100);
         SDL_RenderFillRect(app.renderer, this->clickedPiece.clickedSquare.get());
 		SDL_RenderPresent(app.renderer);
-        SDL_RenderCopy(app.renderer, pieces.at(this->clickedPiece.piece), nullptr, this->clickedPiece.clickedSquare.get());
+        SDL_RenderCopy(app.renderer, this->pieces.at(this->clickedPiece.piece), nullptr, this->clickedPiece.clickedSquare.get());
     }
 }
-void GuiApp::getSquareFromMouse(const GUI::GUIBoard& board, int mouseX, int mouseY) {
-    int file = mouseX / GUI::TILE_SIZE;
-	int rank = mouseY / GUI::TILE_SIZE;
+void GuiApp::handlePress(Game& game, bool& whiteToMove, uint8_t moveCount, Move* moves, const GUI::GUIBoard& board, int mouseX, int mouseY) {
+    Index file = mouseX / GUI::TILE_SIZE;
+    Index rank = mouseY / GUI::TILE_SIZE;
     char piece = board[rank][file];
-
-    if (std::isupper(piece)) {
+    
+    if (std::isalpha(static_cast<unsigned char>(piece)) && std::isupper(piece) == whiteToMove) {
         SDL_Rect rect = {
             file * GUI::TILE_SIZE,
             rank * GUI::TILE_SIZE,
@@ -107,10 +127,61 @@ void GuiApp::getSquareFromMouse(const GUI::GUIBoard& board, int mouseX, int mous
             GUI::TILE_SIZE
         };
         this->clickedPiece.clickedSquare = std::make_unique<SDL_Rect>(rect);
-		this->clickedPiece.piece = piece;
+        this->clickedPiece.piece = piece;
     }
     else {
-		this->clickedPiece.clickedSquare = nullptr;
-		this->clickedPiece.piece = '.';
+        if (this->clickedPiece.isClicked()) {
+            Index startFile = this->clickedPiece.clickedSquare->x / GUI::TILE_SIZE;
+            Index startRank = this->clickedPiece.clickedSquare->y / GUI::TILE_SIZE;
+            Index startSquare = (Chess::RANK_SIZE - 1 - startRank) * Chess::RANK_SIZE + startFile;
+            Index targetSquare = (Chess::RANK_SIZE - 1 - rank) * Chess::RANK_SIZE + file;
+
+            for (uint8_t i = 0; i < moveCount; i++) {
+                if (moves[i].from == startSquare && moves[i].to == targetSquare) {
+                    if (whiteToMove) {
+                        game.makeMove<true>(moves[i]);
+                    }
+                    else {
+                        game.makeMove<false>(moves[i]);
+                    }
+                    whiteToMove = !whiteToMove;
+                    break;
+                }
+            }
+        }
+        this->clickedPiece.clickedSquare = nullptr;
+        this->clickedPiece.piece = '.';
     }
+}
+
+void GuiApp::showMoves(uint8_t moveCount, Move* moves, const GUI::GUIBoard& board) {
+    if (this->clickedPiece.isClicked()) {
+        Index square = (Chess::RANK_SIZE - 1 - (this->clickedPiece.clickedSquare->y / GUI::TILE_SIZE)) * Chess::RANK_SIZE + (this->clickedPiece.clickedSquare->x / GUI::TILE_SIZE);
+
+        for (uint8_t i = 0; i < moveCount; i++) {
+            if (moves[i].from == square) {
+                Index to = moves[i].to;
+                Index toFile = to % Chess::RANK_SIZE;
+                Index toRank = Chess::RANK_SIZE - 1 - (to / Chess::RANK_SIZE);
+
+				std::cout << toFile << " " << toRank << '\n';
+
+                SDL_Rect highlightRect = {
+                    toFile * GUI::TILE_SIZE,
+                    toRank * GUI::TILE_SIZE,
+                    GUI::TILE_SIZE,
+                    GUI::TILE_SIZE
+                };
+
+                SDL_SetRenderDrawColor(app.renderer, 0, 255, 0, 100);
+                SDL_RenderFillRect(app.renderer, &highlightRect);
+                SDL_RenderPresent(app.renderer);
+
+                char piece = board[toRank][toFile];
+                if (piece != '.') {
+                    SDL_RenderCopy(app.renderer, this->pieces.at(piece), nullptr, &highlightRect);
+                }
+            }
+        }
+	}
 }

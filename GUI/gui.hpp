@@ -29,11 +29,11 @@ private:
 	void drawChessBoard();
 	void drawPieces(const GUI::GUIBoard& board);
 	void drawSquareHighlight();
-	void squaredPressed(const GUI::GUIBoard& board, int mouseX, int mouseY);
-	void getSquareFromMouse(const GUI::GUIBoard& board, int mouseX, int mouseY);
+	void handlePress(Game& game, bool& whiteToMove, uint8_t moveCount, Move* moves, const GUI::GUIBoard& board, int mouseX, int mouseY);
+	void showMoves(uint8_t moveCount, Move* moves, const GUI::GUIBoard& board);
 public:
 	GuiApp();
-	void mainLoop(Game& game);
+	void mainLoop(Game& game, bool whiteToMove);
 
 };
 

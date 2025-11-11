@@ -35,5 +35,5 @@ int main() {
 	}
 
 	GuiApp app;
-	app.mainLoop(game);
+	app.mainLoop(game, color);
 }
