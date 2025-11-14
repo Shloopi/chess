@@ -1,5 +1,4 @@
 #include "intermediate.hpp"
-#include "../Bot/Bot.hpp"
 
 void GUIConverter::init() {
 	this->pieceMoves.moveCount = 0;
@@ -9,9 +8,7 @@ void GUIConverter::init() {
 
 bool GUIConverter::handleBot() {
 	if (this->game.isBotTurn()) {
-		Bot bot;
-
-		this->game.makeMove(bot.getBestMove(this->game, this->moves.moveArray.data(), this->moves.moveCount));
+		this->game.makeBotMove(this->moves.moveArray.data(), this->moves.moveCount);
 		this->init();
 		return true;
 	}

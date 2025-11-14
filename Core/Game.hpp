@@ -8,6 +8,7 @@
 #include "BoardState.hpp"
 #include "../Utils/Zobrist.hpp"
 #include "MoveGen.hpp"
+#include "../Bot/Player.hpp"
 
 enum class GameState : uint8_t {
 	ONGOING,
@@ -75,12 +76,27 @@ public:
 	uint8_t fullmoves;
 	uint64_t boardHash;
 	GameState gameState;
-	bool whitePlayer; // true if human, false if bot.
-	bool blackPlayer; // true if human, false if bot.
+	std::shared_ptr<Player> whitePlayer;
+	std::shared_ptr<Player> blackPlayer;
 
-	Game() : whiteToMove(true), gameState(GameState::ONGOING), halfmoves(0), fullmoves(1), boardHash(0), whitePlayer(true), blackPlayer(true) {}
-	Game(bool whitePlayer, bool blackPlayer) : whiteToMove(true), gameState(GameState::ONGOING), halfmoves(0), fullmoves(1), boardHash(0), whitePlayer(whitePlayer), blackPlayer(blackPlayer) {}
+	Game() : whiteToMove(true), gameState(GameState::ONGOING), halfmoves(0), fullmoves(1), boardHash(0) {
+		this->whitePlayer = std::make_shared<Human>(Human(true));
+		this->blackPlayer = std::make_shared<Human>(Human(false));
+	}
+	Game(bool whiteBot, bool blackBot) : whiteToMove(true), gameState(GameState::ONGOING), halfmoves(0), fullmoves(1), boardHash(0) {
+		if (whiteBot) this->whitePlayer = std::make_shared<Bot>(Bot(true));
+		else this->whitePlayer = std::make_shared<Human>(Human(true));
+		if (blackBot) this->blackPlayer = std::make_shared<Bot>(Bot(false));
+		else this->blackPlayer = std::make_shared<Human>(Human(false));
+	}
 
+	void makeBotMove(Move* moves, uint8_t moveCount) {
+		if (this->isBotTurn()) {
+			this->makeMove(this->whiteToMove ?
+				this->whitePlayer->getBestMove(*this, moves, moveCount) :
+				this->blackPlayer->getBestMove(*this, moves, moveCount));
+		}
+	}
 	template <bool perft = false>
 	void makeMove(const Move& move) {
 		if (move.isCapture || move.piece == Chess::PAWN) {
@@ -135,13 +151,9 @@ public:
 		return os;
 	}
 
-	inline bool isHumanTurn() const {
-		if (this->whiteToMove) return this->whitePlayer;
-		else return this->blackPlayer;
-	}
-
 	inline bool isBotTurn() const {
-		return !this->isHumanTurn();
+		if (this->whiteToMove) return this->whitePlayer->getType() == Type::BOT;
+		else return this->blackPlayer->getType() == Type::BOT;
 	}
 
 };

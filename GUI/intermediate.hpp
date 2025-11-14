@@ -25,9 +25,9 @@ struct GUIPieceMoves {
 
 class GUIConverter {
 private:
-	Game game;
 	GUIMoves moves;
 	GUIPieceMoves pieceMoves;
+	Game game;
 
 	void init();
 public:
@@ -36,6 +36,7 @@ public:
 	GUIConverter(Game& game) : game(game) {
 		this->init();
 	}
+
 	bool gameOver() {
 		return this->game.gameState != GameState::ONGOING;
 	}

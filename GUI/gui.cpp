@@ -1,6 +1,5 @@
 #include "gui.hpp"
 #include "../Core/MoveGen.hpp"
-#include "../Bot/Bot.hpp"
 
 GuiApp::GuiApp() {
     GUI::initApp(this->app, "Chess Engine", GUI::WIDTH, GUI::HEIGHT);
@@ -40,7 +39,6 @@ void GuiApp::drawChessBoard() {
 }
 
 void GuiApp::mainLoop(Game& game) {
-    Bot bot;
     this->conv = GUIConverter(game);
 
     bool quit = false;
