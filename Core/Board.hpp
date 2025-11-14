@@ -238,6 +238,12 @@ public:
 		bitboard squareBB = Constants::SQUARE_BBS[square];
 		return (this->getAllPieces<true>() & Constants::SQUARE_BBS[square]) != 0;
 	}
+	constexpr inline bool isPieceAt(Index square, bool whiteToMove) {
+		bitboard squareBB = Constants::SQUARE_BBS[square];
+		bitboard pieces = whiteToMove ? this->getAllPieces<true>() : this->getAllPieces<false>();
+		return (pieces & Constants::SQUARE_BBS[square]) != 0;
+
+	}
 
 	template <bool whiteToMove>
 	constexpr inline bitboard notFriendlyPieces() const {
@@ -263,7 +269,7 @@ public:
 	}
 	constexpr inline Piece getPieceAt(Index square, bool& color) const {
 		Piece piece = getPieceAt<true>(square);
-		if (piece == -1) {
+		if (piece == Chess::NO_PIECE) {
 			piece = getPieceAt<false>(square);
 			color = false;
 		}

@@ -23,14 +23,13 @@ class GuiApp {
 private:
 	std::unordered_map<char, SDL_Texture*> pieces;
 	GUI::App app;
-	ClickedPiece clickedPiece;
+	GUIConverter conv;
 
 	void init();
 	void drawChessBoard();
-	void drawPieces(const GUI::GUIBoard& board);
+	void drawPieces();
 	void drawSquareHighlight();
-	void handlePress(Game& game, uint8_t moveCount, Move* moves, const GUI::GUIBoard& board, int mouseX, int mouseY);
-	void showMoves(uint8_t moveCount, Move* moves, const GUI::GUIBoard& board);
+	void showMoves();
 public:
 	GuiApp();
 	void mainLoop(Game& game);

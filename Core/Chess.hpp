@@ -47,6 +47,7 @@ namespace Chess {
 		if (piece == ROOK) return whiteToMove ? 'R' : 'r';
 		if (piece == QUEEN) return whiteToMove ? 'Q' : 'q';
 		if (piece == KING) return whiteToMove ? 'K' : 'k';
+		else return '.';
 	}
 
 	// ------------- Flags -------------
@@ -359,6 +360,10 @@ struct Move {
 	inline Move() : from(0), to(0), piece(0), flag(0), isCapture(false) {}
 	inline Move(Index from, Index to, Piece piece, Flag flag, bool isCapture = false) : from(from), to(to), piece(piece), flag(flag), isCapture(isCapture) {}
 
+	inline bool isPromotion() const {
+		return this->flag == Chess::BISHOP_PROMOTION || this->flag == Chess::KNIGHT_PROMOTION || 
+			   this->flag == Chess::ROOK_PROMOTION || this->flag == Chess::QUEEN_PROMOTION;
+	}
 	friend std::ostream& operator<<(std::ostream& os, const Move& m) {
 		os << "piece " << Chess::showPiece(m.piece) << " - from: " << Square::getNotation(m.from) << " to: " << Square::getNotation(m.to); // << '\n';
 

@@ -7,11 +7,15 @@
 #include <SDL2/SDL.h>
 
 namespace GUI {
-	constexpr int TILE_SIZE = 100;
+	constexpr uint8_t TILE_SIZE = 100;
 	constexpr int WIDTH = TILE_SIZE * Chess::RANK_SIZE;
 	constexpr int HEIGHT = TILE_SIZE * Chess::RANK_SIZE;
 	const std::string ASSETS_PATH = "GUI/assets/";
-	using GUIBoard = std::array<std::array<char, Chess::RANK_SIZE>, Chess::FILE_SIZE>;
+	struct Coord {
+		int x, y;
+		Coord() = default;
+		Coord(int x, int y) : x(x), y(y) {}
+	};
 };
 
 
