@@ -43,6 +43,11 @@ namespace MoveGen {
         return targetSquares;
     }
 
+    uint8_t genAllLegalMoves(const Game& game, Move* moves) {
+        if (game.whiteToMove) return genAllLegalMoves<true>(game, moves);
+        else return genAllLegalMoves<false>(game, moves);
+    }
+
     template uint8_t genAllLegalMoves<true>(const Game& game, Move* moves);
     template uint8_t genAllLegalMoves<false>(const Game& game, Move* moves);
 
@@ -82,6 +87,11 @@ namespace MoveGen {
         }
 
         return moveCount;
+    }
+
+    bool hasLegalMoves(const Game& game, bool whiteToMove) {
+        if (game.whiteToMove) return hasLegalMoves<true>(game);
+        else return hasLegalMoves<false>(game);
     }
 
     template bool hasLegalMoves<true>(const Game& game);
@@ -181,10 +191,13 @@ namespace MoveGen {
 
         // Count Only.
         if constexpr (countOnly) {
-            moveCount += Chess::numOfBits(canSinglePush) + Chess::numOfBits(canDoublePush) +
-                Chess::numOfBits(canLeftCapture) + Chess::numOfBits(canRightCapture) +
-                4 * (Chess::numOfBits(promoSinglePush) + Chess::numOfBits(promoLeftCapture) +
-                    Chess::numOfBits(promoRightCapture));
+            moveCount += Chess::numOfBits(Chess::pawnsForward<whiteToMove>(canSinglePush) & checkRay) + 
+                Chess::numOfBits(Chess::pawnsForward2<whiteToMove>(canDoublePush) & checkRay) +
+                Chess::numOfBits(Chess::pawnsAttackLeft<whiteToMove>(canLeftCapture) & checkRay) +
+                Chess::numOfBits(Chess::pawnsAttackRight<whiteToMove>(canRightCapture) & checkRay) +
+                4 * (Chess::numOfBits(Chess::pawnsForward<whiteToMove>(promoSinglePush) & checkRay) + 
+                    Chess::numOfBits(Chess::pawnsAttackLeft<whiteToMove>(promoLeftCapture) & checkRay) +
+                    Chess::numOfBits(Chess::pawnsAttackRight<whiteToMove>(promoRightCapture) & checkRay));
             return;
         }
 

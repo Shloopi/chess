@@ -44,7 +44,7 @@ static char getCharFromPiece(Piece piece, bool isWhite) {
 }
 
 namespace Fen {
-    bool handleFen(const std::string& fen, Game& game) {
+    void handleFen(const std::string& fen, Game& game) {
         bool whiteToMove;
 
         std::vector<std::string> splittedFen;
@@ -53,13 +53,11 @@ namespace Fen {
         if (splittedFen.size() != 6) throw std::invalid_argument("Fen::Fen - fen does not contains all variables - " + fen);
 
         generatePieces(game.board, splittedFen[0]);
-        whiteToMove = splittedFen[1] == "w";
+        game.whiteToMove = splittedFen[1] == "w";
         generateCastlingRights(game.board, splittedFen[2]);
         game.board.enPassant = splittedFen[3] == "-" ? 0 : Constants::SQUARE_BBS[Square::getIndex(splittedFen[3])];
         game.halfmoves = std::stoi(splittedFen[4]);
         game.fullmoves = std::stoi(splittedFen[5]);
-
-        return whiteToMove;
     }
 
     void generatePieces(Board& board, const std::string& fenPieces) {
@@ -127,7 +125,6 @@ namespace Fen {
     template std::string genFen<true>(const Game& game);
     template std::string genFen<false>(const Game& game);
 
-    template <bool whiteToMove>
     std::string genFen(const Game& game) {
         std::string fen;
         short count = 0;
@@ -175,7 +172,7 @@ namespace Fen {
         fen += ' ';
 
         // turn.
-        fen += whiteToMove ? 'w' : 'b';
+        fen += game.whiteToMove ? 'w' : 'b';
 
         fen += ' ';
 

@@ -1,5 +1,6 @@
 #include "gui.hpp"
 #include "../Core/MoveGen.hpp"
+#include "../Bot/Bot.hpp"
 
 void GuiApp::init() {
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
@@ -37,7 +38,8 @@ GuiApp::GuiApp() {
 	this->clickedPiece;
 	this->init();
 }
-void GuiApp::mainLoop(Game& game, bool whiteToMove) {
+void GuiApp::mainLoop(Game& game) {
+    Bot bot;
     GUI::GUIBoard board;
 	std::array<Move, 218> moves;
     bool quit = false;
@@ -45,6 +47,11 @@ void GuiApp::mainLoop(Game& game, bool whiteToMove) {
     SDL_Event e;
     uint8_t moveCount = 0;
     while (!quit) {
+        if (game.isBotTurn()) {
+			Move move = bot.getBestMove(game, moves.data(), moveCount);
+			game.makeMove(move);
+            changed = true;
+        }
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 quit = true;
@@ -53,9 +60,8 @@ void GuiApp::mainLoop(Game& game, bool whiteToMove) {
 				changed = true;
                 int mouseX, mouseY;
                 SDL_GetMouseState(&mouseX, &mouseY);
-				this->handlePress(game, whiteToMove, moveCount, moves.data(), board, mouseX, mouseY);
-
-
+				this->handlePress(game, moveCount, moves.data(), board, mouseX, mouseY);
+                
                 if (game.gameState != GameState::ONGOING) {
                     std::cout << "Game Over! State: " << static_cast<int>(game.gameState) << '\n';
                     quit = true;
@@ -67,12 +73,7 @@ void GuiApp::mainLoop(Game& game, bool whiteToMove) {
         SDL_RenderClear(app.renderer);
 
         if (changed) {
-            if (whiteToMove) {
-                moveCount = MoveGen::genAllLegalMoves<true>(game, moves.data());
-            }
-            else {
-                moveCount = MoveGen::genAllLegalMoves<false>(game, moves.data());
-            }
+            moveCount = MoveGen::genAllLegalMoves(game, moves.data());
 
             changed = false;
             drawChessBoard();
@@ -114,12 +115,12 @@ void GuiApp::drawSquareHighlight() {
         SDL_RenderCopy(app.renderer, this->pieces.at(this->clickedPiece.piece), nullptr, this->clickedPiece.clickedSquare.get());
     }
 }
-void GuiApp::handlePress(Game& game, bool& whiteToMove, uint8_t moveCount, Move* moves, const GUI::GUIBoard& board, int mouseX, int mouseY) {
+void GuiApp::handlePress(Game& game, uint8_t moveCount, Move* moves, const GUI::GUIBoard& board, int mouseX, int mouseY) {
     Index file = mouseX / GUI::TILE_SIZE;
     Index rank = mouseY / GUI::TILE_SIZE;
     char piece = board[rank][file];
     
-    if (std::isalpha(static_cast<unsigned char>(piece)) && std::isupper(piece) == whiteToMove) {
+    if (std::isalpha(static_cast<unsigned char>(piece)) && std::isupper(piece) == game.whiteToMove) {
         SDL_Rect rect = {
             file * GUI::TILE_SIZE,
             rank * GUI::TILE_SIZE,
@@ -138,13 +139,7 @@ void GuiApp::handlePress(Game& game, bool& whiteToMove, uint8_t moveCount, Move*
 
             for (uint8_t i = 0; i < moveCount; i++) {
                 if (moves[i].from == startSquare && moves[i].to == targetSquare) {
-                    if (whiteToMove) {
-                        game.makeMove<true>(moves[i]);
-                    }
-                    else {
-                        game.makeMove<false>(moves[i]);
-                    }
-                    whiteToMove = !whiteToMove;
+					game.makeMove(moves[i]);
                     break;
                 }
             }
@@ -163,8 +158,6 @@ void GuiApp::showMoves(uint8_t moveCount, Move* moves, const GUI::GUIBoard& boar
                 Index to = moves[i].to;
                 Index toFile = to % Chess::RANK_SIZE;
                 Index toRank = Chess::RANK_SIZE - 1 - (to / Chess::RANK_SIZE);
-
-				std::cout << toFile << " " << toRank << '\n';
 
                 SDL_Rect highlightRect = {
                     toFile * GUI::TILE_SIZE,

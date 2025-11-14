@@ -666,6 +666,15 @@ public:
 		return *this;
 	}
 
+	Board branch(Move move, bool whiteToMove) const {
+		if (whiteToMove) {
+			return this->branch<true>(move);
+		}
+		else {
+			return this->branch<false>(move);
+		}
+	}
+
 	template <bool whiteToMove, Piece piece, Flag flag = Chess::QUIET>
 	void makeMove(bitboard from, bitboard to) {
 		bitboard change = from | to;
@@ -991,7 +1000,9 @@ public:
 			this->makeMove<false>(move);
 		}
 	}
-
+	inline bool hasInsufficientMaterial() {
+		return this->hasInsufficientMaterial<true>() && this->hasInsufficientMaterial<false>();
+	}
 	template <bool isWhite>
 	inline bool hasInsufficientMaterial() {
 		if (this->getPawns<isWhite>() == 0 && this->getQueens<isWhite>() == 0 &&

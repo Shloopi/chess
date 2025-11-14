@@ -15,35 +15,39 @@ namespace MoveGen {
 	template <bool whiteToMove>
 	uint8_t genAllLegalMoves(const Game& game, Move* moves);
 
-	template <bool whiteToMove>
-	uint8_t countAllLegalMoves(const Game& state);
+	uint8_t genAllLegalMoves(const Game& game, Move* moves);
 
 	template <bool whiteToMove>
-	bool hasLegalMoves(const Game& state);
+	uint8_t countAllLegalMoves(const Game& game);
+
+	bool hasLegalMoves(const Game& game, bool whiteToMove);
 
 	template <bool whiteToMove>
-	bitboard movesLegalityWhileChecked(const Game& state, Index sourceSquare, bitboard targetSquares);
+	bool hasLegalMoves(const Game& game);
 
 	template <bool whiteToMove>
-	bitboard reducePinnedPiecesMoves(const Game& state, Index sourceSquare, bitboard targetSquares);
+	bitboard movesLegalityWhileChecked(const Game& game, Index sourceSquare, bitboard targetSquares);
+
+	template <bool whiteToMove>
+	bitboard reducePinnedPiecesMoves(const Game& game, Index sourceSquare, bitboard targetSquares);
 
 	template <bool whiteToMove, bool countOnly = false>
-	void genPawnMoves(const Game& state, Move* moves, uint8_t& moveCount);
+	void genPawnMoves(const Game& game, Move* moves, uint8_t& moveCount);
 
 	template <bool whiteToMove, bool countOnly = false>
-	void genKingMoves(const Game& state, Move* moves, uint8_t& moveCount);
+	void genKingMoves(const Game& game, Move* moves, uint8_t& moveCount);
 
 	template <bool whiteToMove, bool countOnly = false>
-	void genKnightMoves(const Game& state, Move* moves, uint8_t& moveCount);
+	void genKnightMoves(const Game& game, Move* moves, uint8_t& moveCount);
 
 	template <bool whiteToMove, bool countOnly = false>
-	void genBishopMoves(const Game& state, Move* moves, uint8_t& moveCount);
+	void genBishopMoves(const Game& game, Move* moves, uint8_t& moveCount);
 
 	template <bool whiteToMove, bool countOnly = false>
-	void genQueenMoves(const Game& state, Move* moves, uint8_t& moveCount);
+	void genQueenMoves(const Game& game, Move* moves, uint8_t& moveCount);
 
 	template <bool whiteToMove, bool countOnly = false>
-	void genRookMoves(const Game& state, Move* moves, uint8_t& moveCount);
+	void genRookMoves(const Game& game, Move* moves, uint8_t& moveCount);
 }
 
 

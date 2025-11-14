@@ -39,8 +39,10 @@ namespace Zobrist {
         return rand ^ (rand >> 31);
     }
 
-    template uint64_t hash<true>(const Board& board);
-    template uint64_t hash<false>(const Board& board);
+    uint64_t hash(const Board& board, bool whiteToMove) {
+        if (whiteToMove) return hash<true>(board);
+        else return hash<false>(board);
+    }
 
     template <bool whiteToMove>
     uint64_t hash(const Board& board) {
@@ -94,5 +96,8 @@ namespace Zobrist {
         }
         return hashKey;
     }
+
+    template uint64_t hash<true>(const Board& board);
+    template uint64_t hash<false>(const Board& board);
 }
 

@@ -43,12 +43,11 @@ class Game {
 private:
 	RepetitionTable2 table;
 
-	template <bool whiteToMove>
 	void checkState() {
 		this->gameState = GameState::ONGOING;
-
+		
 		// no possible moves.
-		if (!MoveGen::hasLegalMoves<whiteToMove>(*this)) {
+		if (!MoveGen::hasLegalMoves(*this, this->whiteToMove)) {
 			if (this->state.inCheck()) {
 				this->gameState = GameState::CHECKMATE;
 			}
@@ -61,7 +60,7 @@ private:
 			this->gameState = GameState::DRAW_BY_FIFTY_MOVE_RULE;
 		}
 		// check insufficient material.
-		else if (this->board.hasInsufficientMaterial<whiteToMove>() && this->board.hasInsufficientMaterial<!whiteToMove>()) {
+		else if (this->board.hasInsufficientMaterial()) {
 			this->gameState = GameState::DRAW_BY_INSUFFICIENT_MATERIAL;
 		}
 		else if (this->table.isThreefoldRepetition(this->boardHash)) {
@@ -69,16 +68,20 @@ private:
 		}
 	}
 public:
+	bool whiteToMove;
 	Board board;
 	BoardState state;
 	uint8_t halfmoves;
 	uint8_t fullmoves;
 	uint64_t boardHash;
 	GameState gameState;
+	bool whitePlayer; // true if human, false if bot.
+	bool blackPlayer; // true if human, false if bot.
 
-	Game() : gameState(GameState::ONGOING), halfmoves(0), fullmoves(1) {}
+	Game() : whiteToMove(true), gameState(GameState::ONGOING), halfmoves(0), fullmoves(1), boardHash(0), whitePlayer(true), blackPlayer(true) {}
+	Game(bool whitePlayer, bool blackPlayer) : whiteToMove(true), gameState(GameState::ONGOING), halfmoves(0), fullmoves(1), boardHash(0), whitePlayer(whitePlayer), blackPlayer(blackPlayer) {}
 
-	template <bool whiteToMove, bool perft = false>
+	template <bool perft = false>
 	void makeMove(const Move& move) {
 		if (move.isCapture || move.piece == Chess::PAWN) {
 			this->halfmoves = 0;
@@ -86,14 +89,16 @@ public:
 		}
 		else this->halfmoves++;
 
-		if constexpr (!whiteToMove) this->fullmoves++;
+		if (!this->whiteToMove) this->fullmoves++;
 
-		this->board = this->board.branch<whiteToMove>(move);
-		this->init<!whiteToMove, perft>();
+		this->board = this->board.branch(move, this->whiteToMove);
+		this->whiteToMove = !this->whiteToMove;
+		this->init<perft>();
 	}
 
-	template <bool whiteToMove>
 	void undoMove(const GameSnapshot& snapshot) {
+		this->whiteToMove = !this->whiteToMove;
+
 		table.remove(this->boardHash);
 
 		this->board = *snapshot.boardPtr;
@@ -102,17 +107,17 @@ public:
 		this->boardHash = snapshot.boardHash;
 		this->gameState = snapshot.gameState;
 
-		this->state.init<whiteToMove>(this->board);
+		this->state.init(this->board, this->whiteToMove);
 	}
 
-	template <bool whiteToMove, bool perft = false>
+	template <bool perft = false>
 	void init() {
-		this->state.init<whiteToMove>(this->board);
+		this->state.init(this->board, this->whiteToMove);
 
 		if constexpr (!perft) {
-			this->boardHash = Zobrist::hash<whiteToMove>(this->board);
+			this->boardHash = Zobrist::hash(this->board, this->whiteToMove);
 			table.store(this->boardHash);
-			this->checkState<whiteToMove>();
+			this->checkState();
 		}
 	}
 
@@ -128,6 +133,15 @@ public:
 		os << "Board:\n" << game.board;
 		os << "Board State:\n" << game.state;
 		return os;
+	}
+
+	inline bool isHumanTurn() const {
+		if (this->whiteToMove) return this->whitePlayer;
+		else return this->blackPlayer;
+	}
+
+	inline bool isBotTurn() const {
+		return !this->isHumanTurn();
 	}
 
 };

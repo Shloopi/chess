@@ -113,6 +113,12 @@ namespace Chess {
 	}
 
 	template <bool whiteToMove>
+	static constexpr inline bitboard afterDoublePushRank() {
+		if constexpr (whiteToMove) return RANK4;
+		else return RANK5;
+	}
+
+	template <bool whiteToMove>
 	static constexpr inline bitboard promotionRank() {
 		if constexpr (whiteToMove) return RANK7;
 		else return RANK2;

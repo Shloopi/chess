@@ -13,6 +13,8 @@ namespace Zobrist {
     inline std::array<uint64_t, 9> enPassantFileRandom;
     inline uint64_t seed = 0x5523FEDC480CE0AF;
 
+	uint64_t hash(const Board& board, bool whiteToMove);
+
 	template <bool whiteToMove>
     inline uint64_t hash(const Board& board);
 

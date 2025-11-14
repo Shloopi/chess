@@ -8,32 +8,22 @@
 #include <array>
 #include "GUI/gui.hpp"
 
-bool init(Game& game) {
+void init(Game& game) {
 	Zobrist::init();
 	MoveGen::init();
-	bool color = Fen::handleFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", game);
-	if (color) game.init<true, true>();
-	else game.init<false, true>();
-
-	return color;
+	Fen::handleFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", game);
+	game.init();
 }
+
 int main() {
 	Game game;
-	bool color = init(game);
+	init(game);
 
-	if (color) {
-		//Test::showAfterMoveFens<true>(game);
-		//Test::perftPerMove<true>(game, 1);
-		//Test::makeMove<true>(game, Square::getIndex("g7"), Square::getIndex("a1"));
-		//Test::loopedTimedPerft<true>(game, 1, 7);
-	}
-	else {
-		//Test::showAfterMoveFens<false>(game);
-		//Test::perftPerMove<false>(game, 1);
-		//Test::makeMove<false>(game, Square::getIndex("g7"), Square::getIndex("a1"));
-		//Test::loopedTimedPerft<false>(game, 1, 7);
-	}
+	//Test::showAfterMoveFens(game);
+	//Test::perftPerMove(game, 1);
+	//Test::makeMove(game, Square::getIndex("g7"), Square::getIndex("a1"));
+	Test::loopedTimedPerft(game, 1, 7);
 
-	GuiApp app;
-	app.mainLoop(game, color);
+	//GuiApp app;
+	//app.mainLoop(game);
 }

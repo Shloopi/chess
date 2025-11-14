@@ -119,6 +119,11 @@ public:
 		else this->init<false>(board);
 	}
 
+	inline void init(const Board& board, bool whiteToMove) {
+		if (whiteToMove) this->init<true>(board);
+		else this->init<false>(board);
+	}
+
 	template <bool whiteToMove>
 	void init(const Board& board) {
 		this->calcChecks<whiteToMove>(board);
