@@ -98,7 +98,7 @@ public:
 		}
 	}
 	template <bool perft = false>
-	void makeMove(const Move& move) {
+	void makeMove(Move move) {
 		if (move.isCapture || move.piece == Chess::PAWN) {
 			this->halfmoves = 0;
 			if constexpr (!perft) this->table.eraseTable();

@@ -43,18 +43,8 @@ public:
 
 class Bot : public Player {
 private:
-    static constexpr int PAWN = 100;
-    static constexpr int KNIGHT = 300;
-    static constexpr int BISHOP = 300;
-    static constexpr int ROOK = 500;
-    static constexpr int QUEEN = 900;
-    static inline std::array<std::array<Move, 218>, 12> movesBuffer;
-
-    int evaluate(Game& game);
-    int negaMax(Game& game, int depth);
 public:
     explicit Bot(bool isWhite) : Player(isWhite) {}
-
     Type getType() const override { return Type::BOT; }
 
     Move getBestMove(Game& game, Move* moves, uint8_t moveCount) override;

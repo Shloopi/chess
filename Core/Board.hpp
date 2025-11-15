@@ -10,6 +10,7 @@
 #include "Chess.hpp"
 #include "PseudoMoveGen.hpp"
 #include <bitset>
+#include <bitset>
 
 class Board {
 private:
@@ -152,6 +153,28 @@ public:
 		}
 		else {
 			return Board::blackQueensideRook | Board::blackRookLongCastle;
+		}
+	}
+
+	template <bool whiteToMove, Piece piece>
+	inline bitboard getPieces() {
+		if constexpr (piece == Chess::PAWN) {
+			return this->getPawns<whiteToMove>();
+		}
+		else if constexpr (piece == Chess::KNIGHT) {
+			return this->getKnights<whiteToMove>();
+		}
+		else if constexpr (piece == Chess::BISHOP) {
+			return this->getBishops<whiteToMove>();
+		}
+		else if constexpr (piece == Chess::ROOK) {
+			return this->getRooks<whiteToMove>();
+		}
+		else if constexpr (piece == Chess::QUEEN) {
+			return this->getQueens<whiteToMove>();
+		}
+		else if constexpr (piece == Chess::KING) {
+			return Constants::SQUARE_BBS[this->getKing<whiteToMove>()];
 		}
 	}
 

@@ -7,10 +7,12 @@
 #include "Utils\Fen.hpp"
 #include <array>
 #include "GUI/gui.hpp"
+#include "Bot/Evaluation.hpp"
 
 void init(Game& game) {
 	Zobrist::init();
 	MoveGen::init();
+	Evaluate::init();
 	Fen::handleFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", game);
 	game.init();
 }

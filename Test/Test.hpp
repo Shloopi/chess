@@ -23,7 +23,7 @@ namespace Test {
             const Move move = moves[i];
 
 			GameSnapshot snapshot = game.createSnapshot();
-			game.makeMove<false>(move);
+			game.makeMove<true>(move);
             count += Test::perft(game, depth - 1);
 			game.undoMove(snapshot);
         }
