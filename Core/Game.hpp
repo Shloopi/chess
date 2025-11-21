@@ -42,7 +42,7 @@ public:
 
 class Game {
 private:
-	RepetitionTable2 table;
+	RepetitionTable table;
 
 	void checkState() {
 		this->gameState = GameState::ONGOING;
@@ -90,11 +90,11 @@ public:
 		else this->blackPlayer = std::make_shared<Human>(Human(false));
 	}
 
-	void makeBotMove(Move* moves, uint8_t moveCount) {
+	void makeBotMove(Moves<>& moves) {
 		if (this->isBotTurn()) {
 			this->makeMove(this->whiteToMove ?
-				this->whitePlayer->getBestMove(*this, moves, moveCount) :
-				this->blackPlayer->getBestMove(*this, moves, moveCount));
+				this->whitePlayer->getBestMove(*this, moves) :
+				this->blackPlayer->getBestMove(*this, moves));
 		}
 	}
 	template <bool perft = false, bool search = false>

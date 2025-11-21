@@ -24,9 +24,9 @@ int main() {
 	//Test::showAfterMoveFens(game);
 	//Test::perftPerMove(game, 1);
 	//Test::makeMove(game, Square::getIndex("g7"), Square::getIndex("a1"));
-	Test::loopedTimedPerft(game, 1, 7);
+	//Test::loopedTimedPerft(game, 1, 7);
 
-	//GuiApp app;
-	//app.mainLoop(game);
+	GuiApp app;
+	app.mainLoop(game);
 
 }

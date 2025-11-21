@@ -44,7 +44,7 @@ public:
 
 class RepetitionTable2 {
 private:
-	std::array<uint64_t, 50> table;
+	std::array<uint64_t, 51> table;
 	int size;
 
 public:

@@ -6,28 +6,26 @@
 #include <chrono>
 
 namespace Test {
-    static inline std::array<std::array<Move, 218>, 12> movesBuffer;
+    static inline std::array<Moves<>, 12> movesBuffer;
     inline std::unordered_map<Move, uint8_t> map;
 
     uint64_t perft(Game& game, uint8_t depth) {
-        std::array<Move, 218>& moves = movesBuffer[depth];
-        uint8_t moveCount = MoveGen::genAllLegalMoves(game, &moves[0]);
+		Moves<>& moves = movesBuffer[depth];
+        moves.init();
+        MoveGen::genAllLegalMoves(game, moves);
          
         if (depth == 1) {
-            return moveCount;
+            return moves.count;
         }
         
         uint64_t count = 0;
 
-        for (uint8_t i = 0; i < moveCount; i++) {
-            const Move move = moves[i];
-
-			GameSnapshot snapshot = game.createSnapshot();
-			game.makeMove<true>(move);
+        for (const auto& move : moves) {
+            GameSnapshot snapshot = game.createSnapshot();
+            game.makeMove<true>(move);
             count += Test::perft(game, depth - 1);
-			game.undoMove(snapshot);
+            game.undoMove(snapshot);
         }
-
         
         return count;
     }
@@ -65,11 +63,11 @@ namespace Test {
     }
 
     void perftPerMove(Game& game, int depth) {
-        std::array<Move, 218>& moves = movesBuffer[depth];
-        uint8_t moveCount = MoveGen::genAllLegalMoves(game, &moves[0]);
+        Moves<>& moves = movesBuffer[depth];
+        moves.init();
+        MoveGen::genAllLegalMoves(game, moves);
 
-        for (int i = 0; i < moveCount; i++) {
-            const Move move = moves[i];
+        for (const auto& move : moves) {
             GameSnapshot snapshot = game.createSnapshot();
             game.makeMove<true>(move);
             std::cout << move << " - " << Test::timedPerft(game, depth, false) << '\n';
@@ -79,12 +77,11 @@ namespace Test {
 
     template <bool print = true>
     bool makeMove(Game& game, Index startSquare, Index targetSquare) {
-        std::array<Move, 218> moves;
-        uint8_t moveCount = MoveGen::genAllLegalMoves(game, &moves[0]);
+        Moves& moves = movesBuffer[0];
+        moves.init();
+        MoveGen::genAllLegalMoves(game, moves);
 
-        for (int i = 0; i < moveCount; i++) {
-            const Move move = moves[i];
-
+        for (const auto& move : moves) {
             if (move.from == startSquare && move.to == targetSquare) {
                 if constexpr (print) std::cout << "making move - " << move << '\n';
                 game.makeMove(move);
@@ -96,29 +93,26 @@ namespace Test {
     }
 
     void showMoves(Game& game) {
-        std::array<Move, 218>& moves = movesBuffer[0];
-        uint8_t moveCount = MoveGen::genAllLegalMoves(game, &moves[0]);
+        Moves<>& moves = movesBuffer[0];
+        moves.init();
+        MoveGen::genAllLegalMoves(game, moves);
 
-        std::cout << "Moves: " << (int)moveCount << '\n';
-
-        for (int i = 0; i < moveCount; i++) {
-            const Move move = moves[i];
-            std::cout << move << '\n';
-        }
+        std::cout << moves;
     }
 
     void showAfterMoveFens(Game& game) {
-        std::array<Move, 218>& moves = movesBuffer[0];
-        uint8_t moveCount = MoveGen::genAllLegalMoves(game, &moves[0]);
+        Moves<>& moves = movesBuffer[0];
+        moves.init();
+        MoveGen::genAllLegalMoves(game, moves);
 
         std::cout << '{';
-        for (int i = 0; i < moveCount; i++) {
+        for (int i = 0; i < moves.count; i++) {
             GameSnapshot snapshot = game.createSnapshot();
-            game.makeMove(moves[i]);
+            game.makeMove(moves.moves[i]);
 
             std::string a = Fen::genFen(game);
             std::cout << '"' << a << '"';
-            if (i + 1 < moveCount) std::cout << ", ";
+            if (i + 1 < moves.count) std::cout << ", ";
             game.undoMove(snapshot);
         }
         std::cout << '}' << ';';

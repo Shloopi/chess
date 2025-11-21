@@ -373,6 +373,7 @@ struct Move {
 		return from == other.from && to == other.to && piece == other.piece && flag == other.flag && isCapture == other.isCapture;
 	}
 };
+
 namespace std {
 	template <>
 	struct hash<Move> {

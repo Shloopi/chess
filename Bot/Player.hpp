@@ -2,6 +2,8 @@
 #define PLAYER_HPP
 
 #include "../Core/Chess.hpp"
+#include "BotConst.hpp"
+#include "../Core/MoveGen.hpp"
 
 class Game;
 
@@ -22,7 +24,7 @@ public:
 
     virtual Type getType() const { return Type::PLAYER; }
 
-    virtual Move getBestMove(Game& game, Move* moves, uint8_t moveCount) = 0;
+    virtual Move getBestMove(Game& game, Moves<Move>& moves) = 0;
 };
 
 // -----------------------------
@@ -33,7 +35,7 @@ public:
 
     Type getType() const override { return Type::HUMAN; }
 
-    Move getBestMove(Game& game, Move* moves, uint8_t moveCount) override {
+    Move getBestMove(Game& game, Moves<Move>& moves) override {
         // For Human, you can return a dummy or handle SDL input
         return Move();
     }
@@ -47,7 +49,7 @@ public:
     explicit Bot(bool isWhite) : Player(isWhite) {}
     Type getType() const override { return Type::BOT; }
 
-    Move getBestMove(Game& game, Move* moves, uint8_t moveCount) override;
+    Move getBestMove(Game& game, Moves<Move>& moves) override;
 };
 
 #endif

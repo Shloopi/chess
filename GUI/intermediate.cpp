@@ -1,14 +1,15 @@
 #include "intermediate.hpp"
 
 void GUIConverter::init() {
-	this->pieceMoves.moveCount = 0;
-	this->pieceMoves.pieceSquare = -1;
-	this->moves.moveCount = MoveGen::genAllLegalMoves(this->game, this->moves.moveArray.data());
+	this->moves.init();
+	this->pieceMoves.init();
+	this->pieceSquare = -1;
+	MoveGen::genAllLegalMoves(this->game, this->moves);
 }
 
 bool GUIConverter::handleBot() {
 	if (this->game.isBotTurn()) {
-		this->game.makeBotMove(this->moves.moveArray.data(), this->moves.moveCount);
+		this->game.makeBotMove(this->moves);
 		this->init();
 		return true;
 	}
@@ -23,33 +24,33 @@ void GUIConverter::handlePress(GUI::Coord press) {
 	index = convertGUI(index);
 	
 	if (this->game.board.isPieceAt(index, this->game.whiteToMove)) {
-		this->pieceMoves.pieceSquare = index;
-		pieceMoves.moveCount = 0;
+		this->pieceSquare = index;
+		this->pieceMoves.init();
 
-		for (uint8_t i = 0; i < moves.moveCount; i++) {
-			if (this->moves.moveArray[i].from == index) {
-				this->pieceMoves.moveArray[pieceMoves.moveCount++] = moves.moveArray[i];
+		for (auto& move : this->moves) {
+			if (move.from == index) {
+				this->pieceMoves.addMove(move);
 			}
 		}
 	}
 	else {
-		if (this->pieceMoves.pieceSquare != -1) {
-			for (uint8_t i = 0; i < pieceMoves.moveCount; i++) {
-				if (pieceMoves.moveArray[i].to == index) {
-					if (!pieceMoves.moveArray[i].isPromotion() || pieceMoves.moveArray[i].flag == Chess::QUEEN_PROMOTION) {
-						this->game.makeMove(pieceMoves.moveArray[i]);
+		if (this->pieceSquare != -1) {
+			for (auto& move : this->pieceMoves) {
+				if (move.to == index) {
+					if (!move.isPromotion() || move.flag == Chess::QUEEN_PROMOTION) {
+						this->game.makeMove(move);
 						this->init();
 					}
 				}
 			}
 		}
 
-		this->pieceMoves.moveCount = 0;
-		this->pieceMoves.pieceSquare = -1;
+		this->pieceMoves.init();
+		this->pieceSquare = -1;
 	}
 }
 
-const char GUIConverter::getPiece(Index square) {
+const char GUIConverter::getPiece(Index square) const {
 	square = this->convertGUI(square);
 	bool isWhite;
 	Piece piece = this->game.board.getPieceAt(square, isWhite);
@@ -60,7 +61,7 @@ const char GUIConverter::getPiece(Index square) {
 	else return '.';
 }
 
-Index GUIConverter::getPieceMove(uint8_t iteration)
+Index GUIConverter::getPieceMove(uint8_t iteration) const
 {
-	return this->convertGUI(this->pieceMoves.moveArray[iteration].to);
+	return this->convertGUI(this->pieceMoves.moves[iteration].to);
 }

@@ -43,31 +43,29 @@ namespace MoveGen {
         return targetSquares;
     }
 
-    uint8_t genAllLegalMoves(const Game& game, Move* moves) {
-        if (game.whiteToMove) return genAllLegalMoves<true>(game, moves);
-        else return genAllLegalMoves<false>(game, moves);
+    void genAllLegalMoves(const Game& game, Moves<>& moves) {
+        if (game.whiteToMove) genAllLegalMoves<true>(game, moves);
+        else genAllLegalMoves<false>(game, moves);
     }
 
-    template uint8_t genAllLegalMoves<true>(const Game& game, Move* moves);
-    template uint8_t genAllLegalMoves<false>(const Game& game, Move* moves);
+    template void genAllLegalMoves<true>(const Game& game, Moves<>& moves);
+    template void genAllLegalMoves<false>(const Game& game, Moves<>& moves);
 
     template <bool whiteToMove>
-    uint8_t genAllLegalMoves(const Game& game, Move* moves) {
-        uint8_t moveCount = 0;
+    void genAllLegalMoves(const Game& game, Moves<>& moves) {
 
         if (game.state.numOfChecks() > 1) {
-			MoveGen::genKingMoves<whiteToMove>(game, moves, moveCount);
+			MoveGen::genKingMoves<whiteToMove>(game, &moves);
         }
         else {
-			MoveGen::genPawnMoves<whiteToMove>(game, moves, moveCount);
-			MoveGen::genKnightMoves<whiteToMove>(game, moves, moveCount);
-			MoveGen::genBishopMoves<whiteToMove>(game, moves, moveCount);
-			MoveGen::genRookMoves<whiteToMove>(game, moves, moveCount);
-			MoveGen::genQueenMoves<whiteToMove>(game, moves, moveCount);
-            MoveGen::genKingMoves<whiteToMove>(game, moves, moveCount);
+			MoveGen::genPawnMoves<whiteToMove>(game, &moves);
+			MoveGen::genKnightMoves<whiteToMove>(game, &moves);
+			MoveGen::genBishopMoves<whiteToMove>(game, &moves);
+			MoveGen::genRookMoves<whiteToMove>(game, &moves);
+			MoveGen::genQueenMoves<whiteToMove>(game, &moves);
+            MoveGen::genKingMoves<whiteToMove>(game, &moves);
         }
-        
-        return moveCount;
+       
     }
 
     template<bool whiteToMove>
@@ -75,15 +73,15 @@ namespace MoveGen {
         uint8_t moveCount = 0;
 
         if (game.state.numOfChecks() > 1) {
-            MoveGen::genKingMoves<whiteToMove, true>(game, NULL, moveCount);
+            moveCount += MoveGen::genKingMoves<whiteToMove, true>(game);
         }
         else {
-            MoveGen::genPawnMoves<whiteToMove, true>(game, NULL, moveCount);
-            MoveGen::genKnightMoves<whiteToMove, true>(game, NULL, moveCount);
-            MoveGen::genBishopMoves<whiteToMove, true>(game, NULL, moveCount);
-            MoveGen::genRookMoves<whiteToMove, true>(game, NULL, moveCount);
-            MoveGen::genQueenMoves<whiteToMove, true>(game, NULL, moveCount);
-            MoveGen::genKingMoves<whiteToMove, true>(game, NULL, moveCount);
+            moveCount += MoveGen::genPawnMoves<whiteToMove, true>(game);
+            moveCount += MoveGen::genKnightMoves<whiteToMove, true>(game);
+            moveCount += MoveGen::genBishopMoves<whiteToMove, true>(game);
+            moveCount += MoveGen::genRookMoves<whiteToMove, true>(game);
+            moveCount += MoveGen::genQueenMoves<whiteToMove, true>(game);
+            moveCount += MoveGen::genKingMoves<whiteToMove, true>(game);
         }
 
         return moveCount;
@@ -102,20 +100,20 @@ namespace MoveGen {
         uint8_t moveCount = 0;
 
         if (game.state.numOfChecks() > 1) {
-            MoveGen::genKingMoves<whiteToMove, true>(game, NULL, moveCount);
+            moveCount += MoveGen::genKingMoves<whiteToMove, true>(game);
         }
         else {
-            MoveGen::genPawnMoves<whiteToMove, true>(game, NULL, moveCount);
+            moveCount += MoveGen::genPawnMoves<whiteToMove, true>(game);
             if (moveCount != 0) return true;
-            MoveGen::genKnightMoves<whiteToMove, true>(game, NULL, moveCount);
+            moveCount += MoveGen::genKnightMoves<whiteToMove, true>(game);
             if (moveCount != 0) return true;
-            MoveGen::genBishopMoves<whiteToMove, true>(game, NULL, moveCount);
+            moveCount += MoveGen::genBishopMoves<whiteToMove, true>(game);
             if (moveCount != 0) return true;
-            MoveGen::genRookMoves<whiteToMove, true>(game, NULL, moveCount);
+            moveCount += MoveGen::genRookMoves<whiteToMove, true>(game);
             if (moveCount != 0) return true;
-            MoveGen::genQueenMoves<whiteToMove, true>(game, NULL, moveCount);
+            moveCount += MoveGen::genQueenMoves<whiteToMove, true>(game);
             if (moveCount != 0) return true;
-            MoveGen::genKingMoves<whiteToMove, true>(game, NULL, moveCount);
+            moveCount += MoveGen::genKingMoves<whiteToMove, true>(game);
             if (moveCount != 0) return true;
         }
 
@@ -123,7 +121,7 @@ namespace MoveGen {
     }
 
     template<bool whiteToMove, bool countOnly>
-    void genPawnMoves(const Game& game, Move* moves, uint8_t& moveCount) {
+    uint8_t genPawnMoves(const Game& game, Moves<>* moves) {
 		bitboard pawns = game.board.getPawns<whiteToMove>();
 
 		bitboard enemy = game.board.getEnemyPieces<whiteToMove>();
@@ -191,19 +189,17 @@ namespace MoveGen {
 
         // Count Only.
         if constexpr (countOnly) {
-            moveCount += Chess::numOfBits(Chess::pawnsForward<whiteToMove>(canSinglePush) & checkRay) + 
+            return Chess::numOfBits(Chess::pawnsForward<whiteToMove>(canSinglePush) & checkRay) +
                 Chess::numOfBits(Chess::pawnsForward2<whiteToMove>(canDoublePush) & checkRay) +
                 Chess::numOfBits(Chess::pawnsAttackLeft<whiteToMove>(canLeftCapture) & checkRay) +
                 Chess::numOfBits(Chess::pawnsAttackRight<whiteToMove>(canRightCapture) & checkRay) +
                 4 * (Chess::numOfBits(Chess::pawnsForward<whiteToMove>(promoSinglePush) & checkRay) + 
                     Chess::numOfBits(Chess::pawnsAttackLeft<whiteToMove>(promoLeftCapture) & checkRay) +
                     Chess::numOfBits(Chess::pawnsAttackRight<whiteToMove>(promoRightCapture) & checkRay));
-            return;
         }
 
 		// ----- Insert Moves -----
 		Index startSquare, targetSquare;
-		Move* out = moves + moveCount;
 
 		// Insert Single Pushes.
         while (canSinglePush != 0) {
@@ -211,7 +207,7 @@ namespace MoveGen {
             targetSquare = Chess::pawnForward<whiteToMove>(startSquare);
 
             if ((Constants::SQUARE_BBS[targetSquare] & checkRay) != 0ULL) {
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::QUIET);
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::QUIET));
             }
 		}
 
@@ -221,7 +217,8 @@ namespace MoveGen {
             targetSquare = Chess::pawnForward2<whiteToMove>(startSquare);
 
             if ((Constants::SQUARE_BBS[targetSquare] & checkRay) != 0ULL) {
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::DOUBLE_PAWN_PUSH);
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::DOUBLE_PAWN_PUSH));
+
             }
         }
 
@@ -231,7 +228,7 @@ namespace MoveGen {
             targetSquare = Chess::pawnAttackLeft<whiteToMove>(startSquare);
 
             if ((Constants::SQUARE_BBS[targetSquare] & checkRay) != 0ULL) {
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, targetSquare == enPassant ? Chess::EN_PASSANT : Chess::QUIET, true);
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, targetSquare == enPassant ? Chess::EN_PASSANT : Chess::QUIET, true));
             }
         }
 
@@ -241,7 +238,7 @@ namespace MoveGen {
             targetSquare = Chess::pawnAttackRight<whiteToMove>(startSquare);
 
             if ((Constants::SQUARE_BBS[targetSquare] & checkRay) != 0ULL) {
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, targetSquare == enPassant ? Chess::EN_PASSANT : Chess::QUIET, true);
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, targetSquare == enPassant ? Chess::EN_PASSANT : Chess::QUIET, true));
             }
         }
 
@@ -251,10 +248,10 @@ namespace MoveGen {
             targetSquare = Chess::pawnForward<whiteToMove>(startSquare);
 
             if ((Constants::SQUARE_BBS[targetSquare] & checkRay) != 0ULL) {
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::KNIGHT_PROMOTION);
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::BISHOP_PROMOTION);
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::ROOK_PROMOTION);
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::QUEEN_PROMOTION);
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::KNIGHT_PROMOTION));
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::BISHOP_PROMOTION));
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::ROOK_PROMOTION));
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::QUEEN_PROMOTION));
             }
         }
 
@@ -264,10 +261,10 @@ namespace MoveGen {
             targetSquare = Chess::pawnAttackLeft<whiteToMove>(startSquare);
 
             if ((Constants::SQUARE_BBS[targetSquare] & checkRay) != 0ULL) {
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::KNIGHT_PROMOTION, true);
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::BISHOP_PROMOTION, true);
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::ROOK_PROMOTION, true);
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::QUEEN_PROMOTION, true);
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::KNIGHT_PROMOTION, true));
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::BISHOP_PROMOTION, true));
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::ROOK_PROMOTION, true));
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::QUEEN_PROMOTION, true));
             }
         }
 
@@ -277,17 +274,18 @@ namespace MoveGen {
             targetSquare = Chess::pawnAttackRight<whiteToMove>(startSquare);
 
             if ((Constants::SQUARE_BBS[targetSquare] & checkRay) != 0ULL) {
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::KNIGHT_PROMOTION, true);
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::BISHOP_PROMOTION, true);
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::ROOK_PROMOTION, true);
-                *out++ = Move(startSquare, targetSquare, Chess::PAWN, Chess::QUEEN_PROMOTION, true);
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::KNIGHT_PROMOTION, true));
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::BISHOP_PROMOTION, true));
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::ROOK_PROMOTION, true));
+                moves->addMove(Move(startSquare, targetSquare, Chess::PAWN, Chess::QUEEN_PROMOTION, true));
             }
         }
-        moveCount = out - moves;
+
+        return 0;
     }
 
     template<bool whiteToMove, bool countOnly>
-    void genKingMoves(const Game& game, Move* moves, uint8_t& moveCount) {
+    uint8_t genKingMoves(const Game& game, Moves<>* moves) {
         Index kingSquare = game.board.getKing<whiteToMove>();
         bitboard pieces = game.board.getAllPieces();
 		bitboard enemyPieces = game.board.getEnemyPieces<whiteToMove>();
@@ -295,9 +293,7 @@ namespace MoveGen {
         bitboard moveBitboard = PseudoMoveGen::getPseudoKingMoves(game.board.notFriendlyPieces<whiteToMove>(), kingSquare);
         bitboard tempBitboard = moveBitboard;
         Index targetSquare, targetCastlingSquare;
-
-        // Insertion.
-        Move* out = moves + moveCount;
+		uint8_t moveCount = 0;
 
         // run for every move and check if the target square is attacked.
         while (tempBitboard != 0) {
@@ -308,7 +304,7 @@ namespace MoveGen {
             if (!game.board.isSquareAttacked<whiteToMove>(targetSquare, noKingPieces)) {
                 if constexpr (countOnly) moveCount++;
                 else {
-                    *out++ = Move(kingSquare, targetSquare, Chess::KING, Chess::REMOVE_ALL_CASTLING, Constants::SQUARE_BBS[targetSquare] & enemyPieces);
+                    moves->addMove(Move(kingSquare, targetSquare, Chess::KING, Chess::REMOVE_ALL_CASTLING, Constants::SQUARE_BBS[targetSquare] & enemyPieces));
                 }
             }
             else {
@@ -326,7 +322,7 @@ namespace MoveGen {
             !game.board.isSquareAttacked<whiteToMove>(targetCastlingSquare, pieces)) {
             
                 if constexpr (countOnly) moveCount++;
-                else *out++ = Move(kingSquare, targetCastlingSquare, Chess::KING, Chess::SHORT_CASTLING);
+                else moves->addMove(Move(kingSquare, targetCastlingSquare, Chess::KING, Chess::SHORT_CASTLING));
         }
 
         // check for queenside castling.
@@ -340,19 +336,19 @@ namespace MoveGen {
             !game.board.isSquareAttacked<whiteToMove>(targetCastlingSquare, pieces)) {
             
                 if constexpr (countOnly) moveCount++;
-                else *out++ = Move(kingSquare, targetCastlingSquare, Chess::KING, Chess::LONG_CASTLING);
+                else moves->addMove(Move(kingSquare, targetCastlingSquare, Chess::KING, Chess::LONG_CASTLING));
         }
 
-        if constexpr (!countOnly) moveCount = out - moves;
+        return moveCount;
     }
     template <bool whiteToMove, bool countOnly>
-    void genKnightMoves(const Game& game, Move* moves, uint8_t& moveCount) {
+    uint8_t genKnightMoves(const Game& game, Moves<>* moves) {
         Index startSquare, targetSquare;
         bitboard enemyPieces = game.board.getEnemyPieces<whiteToMove>();
         bitboard movesBitboard = 0ULL, enemyOrEmpty = game.board.notFriendlyPieces<whiteToMove>();
 		bitboard knights = game.board.getKnights<whiteToMove>();
-		Move* out = moves + moveCount;
-        
+        uint8_t moveCount = 0;
+
 		// all pinned knights cannot move.
         knights &= ~game.state.getPinnedPieces();
 
@@ -365,20 +361,21 @@ namespace MoveGen {
             else {
                 while (movesBitboard != 0ULL) {
                     targetSquare = Chess::popLSB(movesBitboard);
-                    *out++ = Move(startSquare, targetSquare, Chess::KNIGHT, Chess::QUIET, Constants::SQUARE_BBS[targetSquare] & enemyPieces);
+                    moves->addMove(Move(startSquare, targetSquare, Chess::KNIGHT, Chess::QUIET, Constants::SQUARE_BBS[targetSquare] & enemyPieces));
                 }
             }
         }
-        if constexpr (!countOnly) moveCount = out - moves;
+
+        return moveCount;
     }
 
     template <bool whiteToMove, bool countOnly>
-    void genBishopMoves(const Game& game, Move* moves, uint8_t& moveCount) {
+    uint8_t genBishopMoves(const Game& game, Moves<>* moves) {
         Index startSquare, targetSquare;
         bitboard enemyPieces = game.board.getEnemyPieces<whiteToMove>();
         bitboard movesBitboard = 0ULL, enemyOrEmpty = game.board.notFriendlyPieces<whiteToMove>();
         bitboard allPieces = game.board.getAllPieces(), bishops = game.board.getBishops<whiteToMove>();
-        Move* out = moves + moveCount;
+        uint8_t moveCount = 0;
 
 		// all pinned bishops by rooks cannot move.
 		bishops &= ~game.state.rookPins;
@@ -393,20 +390,21 @@ namespace MoveGen {
             else {
                 while (movesBitboard != 0ULL) {
                     targetSquare = Chess::popLSB(movesBitboard);
-                    *out++ = Move(startSquare, targetSquare, Chess::BISHOP, Chess::QUIET, Constants::SQUARE_BBS[targetSquare] & enemyPieces);
+                    moves->addMove(Move(startSquare, targetSquare, Chess::BISHOP, Chess::QUIET, Constants::SQUARE_BBS[targetSquare] & enemyPieces));
                 }
             }
         }
-        if constexpr (!countOnly) moveCount = out - moves;
+
+        return moveCount;
     }
 
     template <bool whiteToMove, bool countOnly>
-    void genQueenMoves(const Game& game, Move* moves, uint8_t& moveCount) {
+    uint8_t genQueenMoves(const Game& game, Moves<>* moves) {
         Index startSquare, targetSquare;
         bitboard enemyPieces = game.board.getEnemyPieces<whiteToMove>();
         bitboard movesBitboard = 0ULL, enemyOrEmpty = game.board.notFriendlyPieces<whiteToMove>();
 		bitboard allPieces = game.board.getAllPieces(),  queens = game.board.getQueens<whiteToMove>();
-        Move* out = moves + moveCount;
+        uint8_t moveCount = 0;
 
         while (queens != 0) {
             startSquare = Chess::popLSB(queens);
@@ -418,21 +416,21 @@ namespace MoveGen {
             else {
                 while (movesBitboard != 0ULL) {
                     targetSquare = Chess::popLSB(movesBitboard);
-                    *out++ = Move(startSquare, targetSquare, Chess::QUEEN, Chess::QUIET, Constants::SQUARE_BBS[targetSquare] & enemyPieces);
+                    moves->addMove(Move(startSquare, targetSquare, Chess::QUEEN, Chess::QUIET, Constants::SQUARE_BBS[targetSquare] & enemyPieces));
                 }
             }
         }
-        if constexpr (!countOnly) moveCount = out - moves;
+        return moveCount;
     }
 
     template <bool whiteToMove, bool countOnly>
-    void genRookMoves(const Game& game, Move* moves, uint8_t& moveCount) {
+    uint8_t genRookMoves(const Game& game, Moves<>* moves) {
         Flag flag;
         Index startSquare, targetSquare;
         bitboard enemyPieces = game.board.getEnemyPieces<whiteToMove>();
         bitboard startSquareBB, movesBitboard = 0ULL, enemyOrEmpty = game.board.notFriendlyPieces<whiteToMove>();
         bitboard allPieces = game.board.getAllPieces(), rooks = game.board.getRooks<whiteToMove>();
-        Move* out = moves + moveCount;
+        uint8_t moveCount = 0;
 
         // all pinned rooks by bishops cannot move.
         rooks &= ~game.state.bishopPins;
@@ -454,10 +452,11 @@ namespace MoveGen {
                     else if ((startSquareBB & Board::startingQueensideRook<whiteToMove>()) != 0) flag = Chess::REMOVE_LONG_CASTLING;
                     else flag = Chess::QUIET;
 
-                    *out++ = Move(startSquare, targetSquare, Chess::ROOK, flag, Constants::SQUARE_BBS[targetSquare] & enemyPieces);
+                    moves->addMove(Move(startSquare, targetSquare, Chess::ROOK, flag, Constants::SQUARE_BBS[targetSquare] & enemyPieces));
                 }
             }
         }
-        if constexpr (!countOnly) moveCount = out - moves;
+
+        return moveCount;
     }
 }

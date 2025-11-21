@@ -10,23 +10,11 @@
 
 using GUIBoard = std::array<std::array<char, Chess::RANK_SIZE>, Chess::FILE_SIZE>;
 
-struct GUIMoves {
-	std::array<Move, 218> moveArray;
-	uint8_t moveCount;
-};
-struct GUIPieceMoves {
-	Index pieceSquare;
-	std::array<Move, 28> moveArray;
-	uint8_t moveCount;
-
-	GUIPieceMoves() : pieceSquare(-1), moveCount(0) {}
-};
-
-
 class GUIConverter {
 private:
-	GUIMoves moves;
-	GUIPieceMoves pieceMoves;
+	Moves<> moves;
+	Moves<Move, 28> pieceMoves;
+	Index pieceSquare;
 	Game game;
 
 	void init();
@@ -37,24 +25,24 @@ public:
 		this->init();
 	}
 
-	bool gameOver() {
+	bool gameOver() const {
 		return this->game.gameState != GameState::ONGOING;
 	}
 	bool handleBot();
 	void handlePress(GUI::Coord press);
-	const char getPiece(Index square);
-	Index getPieceMove(uint8_t iteration);
+	const char getPiece(Index square) const;
+	Index getPieceMove(uint8_t iteration) const;
 
-	inline Index getPressedSquare() {
-		return this->convertGUI(this->pieceMoves.pieceSquare);
+	inline Index getPressedSquare() const {
+		return this->convertGUI(pieceSquare);
 	}
-	inline uint8_t getPieceMoveCount() {
-		return this->pieceMoves.moveCount;
+	inline uint8_t getPieceMoveCount() const {
+		return this->pieceMoves.count;
 	}
-	inline GUI::Coord getCoord(Index index) {
+	inline GUI::Coord getCoord(Index index) const {
 		return GUI::Coord(Chess::fileOf(index) * GUI::TILE_SIZE, Chess::rankOf(index) * GUI::TILE_SIZE);
 	}
-	inline Index convertGUI(Index index) {
+	inline Index convertGUI(Index index) const {
 		if (index == -1) return -1;
 		return (Chess::RANK_SIZE - 1 - Chess::rankOf(index)) * Chess::RANK_SIZE + Chess::fileOf(index);
 	}

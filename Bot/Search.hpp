@@ -5,13 +5,14 @@
 #include "BotConst.hpp"
 #include <functional>
 #include "../Core/Game.hpp"
+#include "../Core/movegen.hpp"
 
 namespace Search {
-	inline std::array<std::array<Move, 218>, 12> movesBuffer;
-	inline std::array<std::array<EvalMove, 218>, 12> evalMovesBuffer;
-	inline void MoveOrdering(EvalMove* moves, uint8_t moveCount, bool max = true);
-	EvalMove iterativeDeepening(Game& game, Move* moves, uint8_t moveCount, uint8_t depth);
-	Move search(Game& game, Move* moves, uint8_t moveCount, uint8_t depth);
+	inline std::array<Moves<>, 12> movesBuffer;
+	inline std::array<Moves<EvalMove>, 12> evalMovesBuffer;
+	inline void MoveOrdering(Moves<EvalMove>& moves, bool max = true);
+	EvalMove iterativeDeepening(Game& game, Moves<>& moves, uint8_t depth);
+	EvalMove search(Game& game, Moves<>& moves, uint8_t depth);
 }
 
 
