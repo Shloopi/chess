@@ -71,7 +71,7 @@ public:
 	bool isThreefoldRepetition(uint64_t boardHash) const {
 		uint8_t count = 0;
 
-		for (int i = 0; i < this->size; ++i) {
+		for (int i = 0; i < this->size; i++) {
 			if (this->table[i] == boardHash) {
 				count++;
 				if (count >= 3) {

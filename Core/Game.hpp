@@ -97,11 +97,11 @@ public:
 				this->blackPlayer->getBestMove(*this, moves, moveCount));
 		}
 	}
-	template <bool perft = false>
+	template <bool perft = false, bool search = false>
 	void makeMove(Move move) {
 		if (move.isCapture || move.piece == Chess::PAWN) {
 			this->halfmoves = 0;
-			if constexpr (!perft) this->table.eraseTable();
+			if constexpr (!perft && !search) this->table.eraseTable();
 		}
 		else this->halfmoves++;
 

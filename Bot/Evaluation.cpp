@@ -1,5 +1,6 @@
 #include "Evaluation.hpp"
 #include "../Test/Timer.hpp"
+#include "BotConst.hpp"
 
 inline static Index flipSquare(Index square) {
 	return Chess::toIndex(Chess::RANK_SIZE - 1 - Chess::rankOf(square), Chess::fileOf(square));
@@ -68,6 +69,9 @@ namespace Evaluate {
 	}
 
 	int evaluate(Game& game) {
+		if (game.gameState == GameState::CHECKMATE) return game.whiteToMove ? MAX_SCORE : MIN_SCORE;
+		if (game.gameState != GameState::ONGOING) return 0;
+
 		return evaluatePlacement(game);
 	}
 }

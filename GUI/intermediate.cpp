@@ -21,6 +21,7 @@ void GUIConverter::handlePress(GUI::Coord press) {
 	Index rank = press.y / GUI::TILE_SIZE;
 	Index index = Chess::toIndex(rank, file);
 	index = convertGUI(index);
+	
 	if (this->game.board.isPieceAt(index, this->game.whiteToMove)) {
 		this->pieceMoves.pieceSquare = index;
 		pieceMoves.moveCount = 0;
