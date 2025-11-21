@@ -59,8 +59,8 @@ namespace Evaluate {
 		mgPhase += evaluatePieceType<true, Chess::QUEEN>(game.board, middleGame[true], endGame[true]);
 		mgPhase += evaluatePieceType<true, Chess::KING>(game.board, middleGame[true], endGame[true]);
 
-		int mgScore = middleGame[game.whiteToMove] - middleGame[!game.whiteToMove];
-		int egScore = endGame[game.whiteToMove] - endGame[!game.whiteToMove];
+		int mgScore = middleGame[true] - middleGame[false];
+		int egScore = endGame[true] - endGame[false];
 
 		if (mgPhase > 24) mgPhase = 24;
 		int egPhase = 24 - mgPhase;
@@ -69,7 +69,7 @@ namespace Evaluate {
 	}
 
 	int evaluate(Game& game) {
-		if (game.gameState == GameState::CHECKMATE) return game.whiteToMove ? MAX_SCORE : MIN_SCORE;
+		if (game.gameState == GameState::CHECKMATE) return game.whiteToMove ? MIN_SCORE : MAX_SCORE;
 		if (game.gameState != GameState::ONGOING) return 0;
 
 		return evaluatePlacement(game);

@@ -18,7 +18,7 @@ void init(Game& game) {
 }
 
 int main() {
-	Game game(true, true);
+	Game game(false, true);
 	init(game);
 
 	//Test::showAfterMoveFens(game);

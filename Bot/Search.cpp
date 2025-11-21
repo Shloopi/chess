@@ -133,6 +133,9 @@ EvalMove Search::search(Game& game, Moves<>& moves, uint8_t depth) {
 	const bool isWhite = game.whiteToMove;
 	int counter = 0;
 	EvalMove best = moves.moves[0];
+	if (isWhite) best.score = MIN_SCORE;
+	else best.score = MAX_SCORE;
+
 	int score;
 
 	for (auto& move : moves) {
@@ -140,7 +143,7 @@ EvalMove Search::search(Game& game, Moves<>& moves, uint8_t depth) {
 		game.makeMove<false, true>(move);
 
 		score = minimax(game, MIN_SCORE, MAX_SCORE, depth);
-
+		
 		if (isWhite && score > best.score) {
 			best.move = move;
 			best.score = score;
@@ -152,6 +155,8 @@ EvalMove Search::search(Game& game, Moves<>& moves, uint8_t depth) {
 
 		game.undoMove(snap);
 	}
+
+	std::cout << '\n' << best.move << ", " << best.score << '\n';
 
 	return best;
 }
