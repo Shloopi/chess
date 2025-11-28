@@ -3,7 +3,32 @@
 
 #include <unordered_map>
 #include <array>
+#include "../Bot/BotConst.hpp"
 
+class TranspositionTable {
+private:
+	std::unordered_map<uint64_t, int> table;
+public:
+	void store(uint64_t boardHash, int eval) {
+		this->table[boardHash] = eval;
+	}
+	bool contains(uint64_t boardHash) {
+		return this->table.contains(boardHash);
+	}
+	int get(uint64_t boardHash) {
+		auto it = this->table.find(boardHash);
+
+		if (it != this->table.end()) {
+			return it->second;
+		}
+		else {
+			return MAX_SCORE + 1;
+		}
+	}
+	void eraseTable() {
+		this->table.clear();
+	}
+};
 class RepetitionTable {
 private:
 	std::unordered_map<uint64_t, uint8_t> table;
@@ -44,7 +69,7 @@ public:
 
 class RepetitionTable2 {
 private:
-	std::array<uint64_t, 51> table;
+	std::array<uint64_t, 300> table;
 	int size;
 
 public:

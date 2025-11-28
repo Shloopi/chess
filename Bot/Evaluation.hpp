@@ -5,12 +5,6 @@
 #include "../Core/Chess.hpp"
 
 namespace Evaluate {
-	static constexpr int PAWN = 100;
-	static constexpr int KNIGHT = 300;
-	static constexpr int BISHOP = 300;
-	static constexpr int ROOK = 500;
-	static constexpr int QUEEN = 900;
-
     constexpr inline std::array<int, Chess::BOARD_SIZE> mg_pawn_table = {
       0,   0,   0,   0,   0,   0,  0,   0,
      98, 134,  61,  95,  68, 126, 34, -11,
@@ -153,13 +147,25 @@ namespace Evaluate {
         eg_pawn_table, eg_knight_table, eg_bishop_table, eg_rook_table, eg_queen_table, eg_king_table
     };
 
+    constexpr inline std::array<int, Chess::RANK_SIZE> isolatedPawnsRankTable = { -5, -15, -20, -30, -30, -20, -15, -5 };
+
+    constexpr inline std::array<int, 6> coeff = { 0, 30, 26, 16, 10, 0 };
+
     static std::array<std::array<std::array<int, Chess::BOARD_SIZE>, 6>, 2> mg_tables{};
     static std::array<std::array<std::array<int, Chess::BOARD_SIZE>, 6>, 2> eg_tables{};
 
+
+    static TranspositionTable table;
+
     void init();
-	
+    inline int getPieceValue(Piece piece) {
+        if (piece == Chess::NO_PIECE) return 0;
+        return (mg_value[piece] + eg_value[piece]) / 2;
+    }
+
     int evaluate(Game& game);
-    
+    int isolatedPawns(bitboard pawns, bitboard enemyPawns);
+    int pawnIslands(bitboard pawns);
 }
 
 #endif

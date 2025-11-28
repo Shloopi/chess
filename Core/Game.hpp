@@ -42,7 +42,7 @@ public:
 
 class Game {
 private:
-	RepetitionTable table;
+	RepetitionTable2 table;
 
 	void checkState() {
 		this->gameState = GameState::ONGOING;
@@ -109,7 +109,7 @@ public:
 
 		this->board = this->board.branch(move, this->whiteToMove);
 		this->whiteToMove = !this->whiteToMove;
-		this->init<perft>();
+		this->init<perft, search>();
 	}
 
 	void undoMove(const GameSnapshot& snapshot) {
@@ -126,13 +126,15 @@ public:
 		this->state.init(this->board, this->whiteToMove);
 	}
 
-	template <bool perft = false>
+	template <bool perft = false, bool search = false>
 	void init() {
 		this->state.init(this->board, this->whiteToMove);
 
 		if constexpr (!perft) {
-			this->boardHash = Zobrist::hash(this->board, this->whiteToMove);
-			table.store(this->boardHash);
+			if constexpr (!search) {
+				this->boardHash = Zobrist::hash(this->board, this->whiteToMove);
+				table.store(this->boardHash);
+			}
 			this->checkState();
 		}
 	}

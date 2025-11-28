@@ -59,6 +59,23 @@ namespace PseudoMoveGen {
 	inline bitboard getPseudoKingMoves(bitboard enemyOrEmpty, Index index) {
 		return Constants::KING_MOVES[index] & enemyOrEmpty;
 	}
+
+	template <Piece piece>
+	inline bitboard getPseudoPieceMoves(bitboard enemyOrEmpty, Index index, bitboard occupancy) {
+		if constexpr (piece == Chess::KNIGHT) {
+			return getPseudoKnightMoves(enemyOrEmpty, index);
+		}
+		else if constexpr (piece == Chess::BISHOP) {
+			return getPseudoBishopMoves(enemyOrEmpty, index, occupancy);
+		}
+		else if constexpr (piece == Chess::ROOK) {
+			return getPseudoRookMoves(enemyOrEmpty, index, occupancy);
+		}
+		else if constexpr (piece == Chess::QUEEN) {
+			return getPseudoQueenMoves(enemyOrEmpty, index, occupancy);
+		}
+		else return 0;
+	}
 }
 
 

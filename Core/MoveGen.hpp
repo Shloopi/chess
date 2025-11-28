@@ -56,6 +56,13 @@ namespace MoveGen {
 	inline void init() {
 		PseudoMoveGen::init();
 	}
+
+	template <bool whiteToMove, Piece piece>
+	bitboard getAttackingSquares(const Game& game);
+
+	template <Piece piece>
+	bitboard getAttackingSquares(const Game& game, bool color);
+
 	template <bool whiteToMove>
 	void genAllLegalMoves(const Game& game, Moves<>& moves);
 

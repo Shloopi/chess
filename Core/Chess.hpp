@@ -63,6 +63,7 @@ namespace Chess {
 	constexpr Flag QUEEN_PROMOTION = 9;
 	constexpr Flag SHORT_CASTLING = 10;
 	constexpr Flag LONG_CASTLING = 11;
+	constexpr Flag NO_FLAG = -1;
 
 	// ------------- GEOMETRY -------------
 	constexpr bitboard RANK1 = 0x00000000000000FFULL;
@@ -357,15 +358,32 @@ struct Move {
 	Flag flag;
 	bool isCapture;
 
-	inline Move() : from(0), to(0), piece(0), flag(0), isCapture(false) {}
+	inline Move() : from(0), to(0), piece(Chess::NO_PIECE), flag(Chess::NO_FLAG), isCapture(false) {}
 	inline Move(Index from, Index to, Piece piece, Flag flag, bool isCapture = false) : from(from), to(to), piece(piece), flag(flag), isCapture(isCapture) {}
 
 	inline bool isPromotion() const {
 		return this->flag == Chess::BISHOP_PROMOTION || this->flag == Chess::KNIGHT_PROMOTION || 
 			   this->flag == Chess::ROOK_PROMOTION || this->flag == Chess::QUEEN_PROMOTION;
 	}
+
+	inline Piece getPromotedPiece() const {
+		if (this->flag == Chess::BISHOP_PROMOTION) {
+			return Chess::BISHOP;
+		}
+		else if (this->flag == Chess::KNIGHT_PROMOTION) {
+			return Chess::KNIGHT;
+		}
+		else if (this->flag == Chess::ROOK_PROMOTION) {
+			return Chess::ROOK;
+		}
+		else if (this->flag == Chess::QUEEN_PROMOTION) {
+			return Chess::QUEEN;
+		}
+
+		return Chess::NO_PIECE;
+	}
 	friend std::ostream& operator<<(std::ostream& os, const Move& m) {
-		os << "piece " << Chess::showPiece(m.piece) << " - from: " << Square::getNotation(m.from) << " to: " << Square::getNotation(m.to); // << '\n';
+		os << "piece " << Chess::showPiece(m.piece) << " - from: " << Square::getNotation(m.from) << " to: " << Square::getNotation(m.to) << '\n';
 
 		return os;
 	}

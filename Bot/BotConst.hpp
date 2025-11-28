@@ -20,6 +20,12 @@ struct EvalMove {
         score = MIN_SCORE;
         return *this;
     }
+
+    friend std::ostream& operator<<(std::ostream& os, const EvalMove& m) {
+        os << "Score: " << m.score << " - " << m.move;
+
+        return os;
+    }
 };
 
 

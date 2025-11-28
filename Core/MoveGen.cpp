@@ -42,6 +42,137 @@ namespace MoveGen {
 
         return targetSquares;
     }
+    
+    template bitboard getAttackingSquares<Chess::NO_PIECE>(const Game& game, bool color);
+    template bitboard getAttackingSquares<Chess::PAWN>(const Game& game, bool color);
+    template bitboard getAttackingSquares<Chess::KNIGHT>(const Game& game, bool color);
+    template bitboard getAttackingSquares<Chess::BISHOP>(const Game& game, bool color);
+    template bitboard getAttackingSquares<Chess::ROOK>(const Game& game, bool color);
+    template bitboard getAttackingSquares<Chess::QUEEN>(const Game& game, bool color);
+    template bitboard getAttackingSquares<Chess::KING>(const Game& game, bool color);
+
+    template <Piece piece>
+    bitboard getAttackingSquares(const Game& game, bool color) {
+        if (color) return getAttackingSquares<true, piece>(game);
+        else return getAttackingSquares<false, piece>(game);
+    }
+
+    template<bool whiteToMove, Piece piece>
+    bitboard getAttackingSquares(const Game& game)
+    {
+        bitboard allPieces = game.board.getAllPieces();
+        Index kingSquare = game.board.getKing<whiteToMove>();
+        bitboard leftAttack = 0, rightAttack = 0, knightAttacks = 0,
+            bishopAttacks = 0, rookAttacks = 0, queenAttacks = 0, kingAttacks = 0;
+        // Pawns
+        if constexpr (piece == Chess::NO_PIECE || piece == Chess::PAWN) {
+            bitboard pawns = game.board.getPawns<whiteToMove>() & ~game.state.rookPins;
+            leftAttack = pawns & Chess::pawnLeftMask<whiteToMove>();
+            rightAttack = pawns & Chess::pawnRightMask<whiteToMove>();
+            
+            bitboard pinRay, pinnedPawnBB, diagonalPinnedPawns = pawns & game.state.bishopPins;
+            Index pinnedPawn;
+            while (diagonalPinnedPawns != 0) {
+                pinnedPawn = Chess::popLSB(diagonalPinnedPawns);
+                pinnedPawnBB = Constants::SQUARE_BBS[pinnedPawn];
+
+                pinRay = Constants::BETWEEN_TABLE[kingSquare][pinnedPawn];
+
+                if ((pinRay & Chess::pawnsAttackLeft<whiteToMove>(pinnedPawnBB & Chess::pawnLeftMask<whiteToMove>())) == 0) {
+                    leftAttack &= ~pinnedPawnBB;
+                }
+                if ((pinRay & Chess::pawnsAttackRight<whiteToMove>(pinnedPawnBB & Chess::pawnRightMask<whiteToMove>())) == 0) {
+                    rightAttack &= ~pinnedPawnBB;
+                }
+            }
+
+            leftAttack = Chess::pawnsAttackLeft<whiteToMove>(leftAttack);
+            rightAttack = Chess::pawnsAttackRight<whiteToMove>(rightAttack);
+
+            if constexpr (piece == Chess::PAWN) return leftAttack | rightAttack;
+        }
+
+        // Knights
+        if constexpr (piece == Chess::NO_PIECE || piece == Chess::KNIGHT) {
+            bitboard knights = game.board.getKnights<whiteToMove>() & ~game.state.getPinnedPieces();
+            Index knightSquare;
+            while (knights != 0) {
+                knightSquare = Chess::popLSB(knights);
+
+                knightAttacks |= PseudoMoveGen::getPseudoKnightMoves(Chess::MAX_BITBOARD, knightSquare);
+            }
+
+            if constexpr (piece == Chess::KNIGHT) return knightAttacks;
+        }
+
+        // Bishops
+        if constexpr (piece == Chess::NO_PIECE || piece == Chess::BISHOP) {
+            bitboard bishops = game.board.getBishops<whiteToMove>() & ~game.state.rookPins, bishopAttackBitboard;
+
+            Index startSquare;
+            while (bishops != 0) {
+                startSquare = Chess::popLSB(bishops);
+                bishopAttackBitboard = PseudoMoveGen::getPseudoBishopMoves(Chess::MAX_BITBOARD, startSquare, allPieces);
+                bishopAttackBitboard = MoveGen::reducePinnedPiecesMoves<whiteToMove>(game, startSquare, bishopAttackBitboard);
+                bishopAttacks |= bishopAttackBitboard;
+            }
+
+            if constexpr (piece == Chess::BISHOP) return bishopAttacks;
+        }
+        // Rooks
+        if constexpr (piece == Chess::NO_PIECE || piece == Chess::ROOK) {
+            bitboard rooks = game.board.getRooks<whiteToMove>() & ~game.state.bishopPins, rookAttackBitboard;
+
+            Index startSquare;
+            while (rooks != 0) {
+                startSquare = Chess::popLSB(rooks);
+                rookAttackBitboard = PseudoMoveGen::getPseudoRookMoves(Chess::MAX_BITBOARD, startSquare, allPieces);
+                rookAttackBitboard = MoveGen::reducePinnedPiecesMoves<whiteToMove>(game, startSquare, rookAttackBitboard);
+                rookAttacks |= rookAttackBitboard;
+            }
+
+            if constexpr (piece == Chess::ROOK) return rookAttacks;
+        }
+
+        // Queens
+        if constexpr (piece == Chess::NO_PIECE || piece == Chess::QUEEN) {
+            bitboard queens = game.board.getQueens<whiteToMove>(), queenAttackBitboard;
+
+            Index startSquare;
+            while (queens != 0) {
+                startSquare = Chess::popLSB(queens);
+                queenAttackBitboard = PseudoMoveGen::getPseudoQueenMoves(Chess::MAX_BITBOARD, startSquare, allPieces);
+                queenAttackBitboard = MoveGen::reducePinnedPiecesMoves<whiteToMove>(game, startSquare, queenAttackBitboard);
+                queenAttacks |= queenAttackBitboard;
+            }
+
+            if constexpr (piece == Chess::QUEEN) return queenAttacks;
+        }
+
+        // King
+        if constexpr (piece == Chess::NO_PIECE || piece == Chess::KING) {
+            bitboard noKingPieces = allPieces & ~Constants::SQUARE_BBS[kingSquare];
+            kingAttacks = PseudoMoveGen::getPseudoKingMoves(Chess::MAX_BITBOARD, kingSquare);
+            bitboard tempBitboard = kingAttacks;
+            Index targetSquare;
+            uint8_t moveCount = 0;
+
+            while (tempBitboard != 0) {
+                targetSquare = Chess::popLSB(tempBitboard);
+
+                if (game.board.isSquareAttacked<whiteToMove>(targetSquare, noKingPieces)) {
+                    kingAttacks &= ~Constants::SQUARE_BBS[targetSquare];
+                }
+            }
+
+            if constexpr (piece == Chess::KING) return kingAttacks;
+        }
+
+        if constexpr (piece == Chess::NO_PIECE) {
+            return leftAttack | rightAttack | knightAttacks |
+                bishopAttacks | rookAttacks | queenAttacks | kingAttacks;
+        }
+    }
 
     void genAllLegalMoves(const Game& game, Moves<>& moves) {
         if (game.whiteToMove) genAllLegalMoves<true>(game, moves);
@@ -65,7 +196,6 @@ namespace MoveGen {
 			MoveGen::genQueenMoves<whiteToMove>(game, &moves);
             MoveGen::genKingMoves<whiteToMove>(game, &moves);
         }
-       
     }
 
     template<bool whiteToMove>

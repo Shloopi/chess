@@ -4,13 +4,11 @@
 #include <chrono>
 #include "BotConst.hpp"
 #include "Search.hpp"
-
+#include "Evaluation.hpp"
 Move Bot::getBestMove(Game& game, Moves<>& moves) {
 	EvalMove best;
-	//best = Search::iterativeDeepening(game, moves, moveCount, 4);
-	//std::cout << best.move << '\n';
-	best = Search::search(game, moves, 3);
-	//std::cout << best.move << '\n';
+	//best = Search::iterativeDeepening(game, moves, 5);
+	best = Search::search(game, moves, 4);
 
 	return best.move;
 }

@@ -7,7 +7,6 @@
 
 namespace Test {
     static inline std::array<Moves<>, 12> movesBuffer;
-    inline std::unordered_map<Move, uint8_t> map;
 
     uint64_t perft(Game& game, uint8_t depth) {
 		Moves<>& moves = movesBuffer[depth];
